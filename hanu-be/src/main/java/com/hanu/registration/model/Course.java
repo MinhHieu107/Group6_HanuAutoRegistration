@@ -8,15 +8,19 @@ public class Course {
     private String subGroup;
     private Integer credits;
 
-    public Course() {
-    }
+    private String lecturer;
+    private String scheduleTime;
 
-    public Course(Long id, String courseCode, String groupName, String subGroup, Integer credits) {
-        this.id = id;
-        this.courseCode = courseCode;
-        this.groupName = groupName;
-        this.subGroup = subGroup;
-        this.credits = credits;
+    private int enrolled;
+    private int capacity;
+
+    private String department;
+    private String courseNameEn;
+
+    public Course() {}
+
+    public boolean hasSlots() {
+        return enrolled < capacity;
     }
 
     public Long getId() {
@@ -57,5 +61,53 @@ public class Course {
 
     public void setCredits(Integer credits) {
         this.credits = credits;
+    }
+
+    public String getLecturer() {
+        return lecturer;
+    }
+
+    public void setLecturer(String lecturer) {
+        this.lecturer = lecturer;
+    }
+
+    public String getScheduleTime() {
+        return scheduleTime;
+    }
+
+    public void setScheduleTime(String scheduleTime) {
+        this.scheduleTime = scheduleTime;
+    }
+
+    public int getEnrolled() {
+        return enrolled;
+    }
+
+    public void setEnrolled(int enrolled) {
+        this.enrolled = enrolled;
+    }
+
+    public int getCapacity() {
+        return capacity;
+    }
+
+    public void setCapacity(int capacity) {
+        this.capacity = capacity;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+
+    public String getCourseNameEn() {
+        return courseNameEn;
+    }
+
+    public void setCourseNameEn(String courseNameEn) {
+        this.courseNameEn = courseNameEn;
     }
 }
