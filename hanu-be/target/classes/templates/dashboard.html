@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HANU Automatic Registration - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = { darkMode: "class" }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen">
+
+<!-- Header -->
+<header class="bg-[#f9f9f9] flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 border-b">
+    <div class="text-xl font-bold tracking-tight text-[#1A237E]">
+        HANU Automatic Registration
+    </div>
+    <nav class="hidden md:flex items-center gap-8">
+        <a class="text-[#1A237E] font-bold border-b-2 border-[#1A237E] pb-1" href="/dashboard">Dashboard</a>
+        <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/courses/search">Course Search</a>
+        <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/timetable">Timetable</a>
+        <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="#">History</a>
+    </nav>
+    <div class="flex items-center gap-4">
+        <button class="p-2 text-slate-600 hover:bg-[#f3f3f3] rounded-full transition-all">
+            <span class="material-symbols-outlined">notifications</span>
+        </button>
+        <div class="flex items-center gap-3 pl-2 border-l">
+            <div class="text-right hidden sm:block">
+                <p class="text-sm font-bold" th:text="${session.studentId} ?: 'Guest'"></p>
+                <p class="text-[10px] uppercase tracking-wider text-gray-500">Student</p>
+            </div>
+            <a href="/logout"
+               class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center hover:bg-red-100 transition-colors">
+                <span class="material-symbols-outlined text-red-600">logout</span>
+            </a>
+        </div>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-8 py-10">
+
+    <!-- Welcome -->
+    <section class="mb-12">
+        <h1 class="text-4xl font-extrabold text-primary mb-2 tracking-tight">Academic Overview</h1>
+        <p class="text-on-surface-variant">Welcome back, <span th:text="${session.studentId}"></span></p>
+    </section>
+
+    <!-- Messages -->
+    <div th:if="${msg}" class="bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-xl mb-8 flex items-center gap-3">
+        <span class="material-symbols-outlined">check_circle</span>
+        <span th:text="${msg}"></span>
+    </div>
+    <div th:if="${error}" class="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-xl mb-8 flex items-center gap-3">
+        <span class="material-symbols-outlined">error</span>
+        <span th:text="${error}"></span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Content -->
+        <div class="lg:col-span-8 space-y-6">
+
+            <!-- Overview Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                    <span class="material-symbols-outlined text-3xl text-blue-600 mb-3">event_available</span>
+                    <p class="text-sm font-medium text-gray-500">Registration Status</p>
+                    <p class="text-2xl font-bold mt-1">Ready</p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                    <span class="material-symbols-outlined text-3xl text-emerald-600 mb-3">analytics</span>
+                    <p class="text-sm font-medium text-gray-500">Total Credits Selected</p>
+                    <p class="text-2xl font-bold mt-1" th:text="${myRecords.size()}"></p>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm">
+                    <span class="material-symbols-outlined text-3xl text-amber-600 mb-3">schedule</span>
+                    <p class="text-sm font-medium text-gray-500">Next Window</p>
+                    <p class="text-lg font-semibold mt-1">Open soon</p>
+                </div>
+            </div>
+
+            <!-- Active Requests (Hàng đợi) -->
+            <div class="bg-white rounded-3xl shadow-sm p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold">Active Requests</h2>
+                    <p class="text-sm text-gray-500">Auto-registration priority queue</p>
+                </div>
+
+                <div th:if="${pendingCount > 0}" class="space-y-4">
+                    <div th:each="record : ${myRecords}"
+                         th:if="${record.status.name() == 'PENDING'}"
+                         class="bg-gray-50 p-5 rounded-2xl flex justify-between items-center">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center font-bold"
+                                 th:text="${record.course.courseCode.substring(0,2)}"></div>
+                            <div>
+                                <p class="font-semibold" th:text="${record.course.courseCode}"></p>
+                                <p class="text-sm text-gray-500" th:text="${record.course.groupName} + ' • ' + ${record.course.subGroup}"></p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs font-bold text-amber-600">Priority <span th:text="${record.priority}"></span></p>
+                        </div>
+                        <form th:action="@{/queue/remove}" method="post">
+                            <input type="hidden" name="courseId" th:value="${record.course.id}">
+                            <button type="submit" class="text-red-600 text-sm font-medium hover:underline">Remove</button>
+                        </form>
+                    </div>
+                </div>
+                <p th:if="${pendingCount == 0}" class="text-gray-500 py-8 text-center">Chưa có môn nào trong hàng đợi.</p>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="lg:col-span-4 space-y-6">
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-3xl shadow-sm p-8">
+                <h3 class="text-xl font-bold mb-6">Quick Actions</h3>
+                <a href="/courses/search"
+                   class="flex items-center justify-between bg-gray-50 hover:bg-gray-100 p-4 rounded-2xl mb-3 transition">
+                    <span>Search Courses</span>
+                    <span class="material-symbols-outlined">search</span>
+                </a>
+                <a href="#" class="flex items-center justify-between bg-gray-50 hover:bg-gray-100 p-4 rounded-2xl mb-3 transition">
+                    <span>Update Timetable</span>
+                    <span class="material-symbols-outlined">calendar_month</span>
+                </a>
+                <a href="#" class="flex items-center justify-between bg-gray-50 hover:bg-gray-100 p-4 rounded-2xl transition">
+                    <span>View History</span>
+                    <span class="material-symbols-outlined">history</span>
+                </a>
+            </div>
+        </div>
+
+    </div>
+</main>
+
+</body>
+</html>
