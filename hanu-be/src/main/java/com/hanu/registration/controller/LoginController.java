@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.util.ArrayList;
+
 @Controller
 public class LoginController {
 
@@ -17,6 +19,7 @@ public class LoginController {
     public LoginController(HanuAuthService hanuAuthService) {
         this.hanuAuthService = hanuAuthService;
     }
+
     @GetMapping("/login")
     public String showLoginPage() {
         return "login";
@@ -36,10 +39,8 @@ public class LoginController {
             session.setAttribute("fullName", result.getFullName());
             session.setAttribute("roles", result.getRoles());
 
-            // Lưu toàn bộ token/session QLĐT để dùng tiếp
             session.setAttribute("qldtTokens", result.getTokens());
 
-            // Có thể lưu riêng cho dễ gọi
             session.setAttribute("accessToken", result.getTokens().get("access_token"));
             session.setAttribute("refreshToken", result.getTokens().get("refresh_token"));
             session.setAttribute("tokenType", result.getTokens().get("token_type"));
@@ -51,20 +52,25 @@ public class LoginController {
             session.setAttribute("principal", result.getTokens().get("principal"));
             session.setAttribute("userLevel", result.getTokens().get("user_level"));
 
-            return "redirect:/home";
+            return "redirect:/dashboard";
         }
 
         model.addAttribute("error", result.getMessage());
         return "login";
     }
 
-    @GetMapping("/home")
-    public String home(HttpSession session) {
+    @GetMapping("/dashboard")
+    public String dashboard(HttpSession session, Model model) {
         Boolean loggedIn = (Boolean) session.getAttribute("loggedIn");
         if (loggedIn == null || !loggedIn) {
             return "redirect:/login";
         }
-        return "home";
+
+        // Tạm thời gán dữ liệu rỗng để dashboard không lỗi
+        model.addAttribute("myRecords", new ArrayList<>());
+        model.addAttribute("pendingCount", 0);
+
+        return "dashboard";
     }
 
     @GetMapping("/logout")
