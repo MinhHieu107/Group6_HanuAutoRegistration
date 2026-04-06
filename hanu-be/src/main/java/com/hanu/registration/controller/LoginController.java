@@ -59,19 +59,7 @@ public class LoginController {
         return "login";
     }
 
-    @GetMapping("/dashboard")
-    public String dashboard(HttpSession session, Model model) {
-        Boolean loggedIn = (Boolean) session.getAttribute("loggedIn");
-        if (loggedIn == null || !loggedIn) {
-            return "redirect:/login";
-        }
 
-        // Tạm thời gán dữ liệu rỗng để dashboard không lỗi
-        model.addAttribute("myRecords", new ArrayList<>());
-        model.addAttribute("pendingCount", 0);
-
-        return "dashboard";
-    }
 
     @GetMapping("/logout")
     public String logout(HttpSession session) {
