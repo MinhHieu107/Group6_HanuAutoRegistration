@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HANU Automatic Registration - Course Search</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script id="tailwind-config">
         tailwind.config = { darkMode: "class" }
     </script>
@@ -15,11 +15,120 @@
         h1, h2, h3 { font-family: 'Manrope', sans-serif; }
         table { border-collapse: collapse; }
         th { font-weight: 600; }
+
+        .timetable-shell {
+            overflow: auto;
+        }
+
+        .timetable {
+            min-width: 520px;
+            display: grid;
+            grid-template-columns: 52px repeat(7, 1fr);
+            grid-template-rows: 34px repeat(12, 38px);
+            position: relative;
+            border: 1px solid #d1d5db;
+            border-radius: 16px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .tt-header-corner {
+            grid-column: 1;
+            grid-row: 1;
+            background: #0f6ea8;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            border-right: 1px solid #d1d5db;
+            border-bottom: 1px solid #d1d5db;
+            font-size: 12px;
+        }
+
+        .tt-day-header {
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            border-bottom: 1px solid #d1d5db;
+            border-right: 1px solid #d1d5db;
+            font-size: 12px;
+        }
+
+        .tt-period-label {
+            background: #0f6ea8;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            border-right: 1px solid #d1d5db;
+            border-bottom: 1px solid rgba(255,255,255,0.18);
+            font-size: 11px;
+        }
+
+        .tt-cell {
+            border-right: 1px solid #e5e7eb;
+            border-bottom: 1px solid #e5e7eb;
+            background: #ffffff;
+        }
+
+        .tt-overlay {
+            position: absolute;
+            top: 34px;
+            left: 52px;
+            right: 0;
+            bottom: 0;
+            z-index: 5;
+            pointer-events: none;
+        }
+
+        .tt-block {
+            position: absolute;
+            border-radius: 12px;
+            padding: 4px 6px;
+            overflow: hidden;
+            font-size: 9px;
+            line-height: 1.2;
+            border: 1px solid;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+        }
+
+        .tt-block-normal {
+            background: #dbeafe;
+            border-color: #60a5fa;
+            color: #1e3a8a;
+        }
+
+        .tt-block-conflict {
+            background: #fee2e2;
+            border-color: #f87171;
+            color: #991b1b;
+            z-index: 20;
+        }
+
+        .tt-block-title {
+            font-weight: 700;
+            margin-bottom: 2px;
+            font-size: 9px;
+        }
+
+        .tt-block-sub {
+            font-size: 8px;
+            opacity: 0.95;
+        }
+
+        .tt-block-time {
+            font-size: 8px;
+            margin-top: 4px;
+            opacity: 0.9;
+        }
     </style>
 </head>
 <body class="bg-surface text-on-surface min-h-screen">
 
-<!-- Header -->
 <header class="bg-[#f9f9f9] flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 border-b">
     <div class="text-xl font-bold tracking-tight text-[#1A237E]">
         HANU Automatic Registration
@@ -45,142 +154,396 @@
     </div>
 </header>
 
-<main class="max-w-7xl mx-auto px-8 py-10">
-
+<main class="max-w-[1600px] mx-auto px-8 py-10">
     <h1 class="text-4xl font-extrabold text-primary mb-2">Academic Course Search</h1>
-    <p class="text-on-surface-variant mb-8">Browse and filter available courses for the current semester.</p>
+    <p class="text-on-surface-variant mb-2">Browse and filter available courses for the current semester.</p>
+    <p class="text-sm text-gray-500 mb-8">
+        Current major filter:
+        <span class="font-semibold" th:text="${studentMajorCode} ?: 'Unknown'"></span>
+    </p>
 
-    <!-- Bộ lọc -->
-    <form id="filterForm" th:action="@{/courses/search}" method="get" class="flex flex-wrap gap-6 mb-8">
-        <!-- Department -->
-        <div>
-            <label class="block text-sm font-medium mb-1">Department</label>
-            <select name="department" onchange="this.form.submit()" class="border rounded-lg px-4 py-2 w-64">
-                <option value="All" th:selected="${department == null or department == 'All'}">All</option>
-                <option value="FIT (Informatics)" th:selected="${department == 'FIT (Informatics)'}">FIT (Informatics)</option>
-                <option value="FIS (International Studies)" th:selected="${department == 'FIS (International Studies)'}">FIS (International Studies)</option>
-                <option value="FENG (English)" th:selected="${department == 'FENG (English)'}">FENG (English)</option>
-            </select>
-        </div>
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
 
-        <!-- Credits -->
-        <div>
-            <label class="block text-sm font-medium mb-1">Credits</label>
-            <div class="flex gap-2">
-                <button type="button" onclick="setFilter('creditsStr', '2 Credits')"
-                        class="px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
-                        th:classappend="${creditsStr == '2 Credits'} ? 'bg-blue-600 text-white border-blue-600' : ''">
-                    2 Credits
-                </button>
-                <button type="button" onclick="setFilter('creditsStr', '3 Credits')"
-                        class="px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
-                        th:classappend="${creditsStr == '3 Credits'} ? 'bg-blue-600 text-white border-blue-600' : ''">
-                    3 Credits
-                </button>
-                <button type="button" onclick="setFilter('creditsStr', '4 Credits')"
-                        class="px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
-                        th:classappend="${creditsStr == '4 Credits'} ? 'bg-blue-600 text-white border-blue-600' : ''">
-                    4 Credits
-                </button>
+        <div class="xl:col-span-8">
+
+            <form id="filterForm" th:action="@{/courses/search}" method="get" class="flex flex-wrap gap-6 mb-8">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Credits</label>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="setFilter('creditsStr', '2 Credits')"
+                                class="px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
+                                th:classappend="${creditsStr == '2 Credits'} ? 'bg-blue-600 text-white border-blue-600' : ''">
+                            2 Credits
+                        </button>
+                        <button type="button" onclick="setFilter('creditsStr', '3 Credits')"
+                                class="px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
+                                th:classappend="${creditsStr == '3 Credits'} ? 'bg-blue-600 text-white border-blue-600' : ''">
+                            3 Credits
+                        </button>
+                        <button type="button" onclick="setFilter('creditsStr', '4 Credits')"
+                                class="px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
+                                th:classappend="${creditsStr == '4 Credits'} ? 'bg-blue-600 text-white border-blue-600' : ''">
+                            4 Credits
+                        </button>
+                        <button type="button" onclick="setFilter('creditsStr', '')"
+                                class="px-4 py-2 border rounded-lg hover:bg-gray-100 transition">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-1">Status</label>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="setFilter('status', 'Open')"
+                                class="px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
+                                th:classappend="${status == 'Open'} ? 'bg-emerald-600 text-white border-emerald-600' : ''">
+                            Open
+                        </button>
+                        <button type="button" onclick="setFilter('status', 'Full')"
+                                class="px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
+                                th:classappend="${status == 'Full'} ? 'bg-red-600 text-white border-red-600' : ''">
+                            Full
+                        </button>
+                        <button type="button" onclick="setFilter('status', '')"
+                                class="px-4 py-2 border rounded-lg hover:bg-gray-100 transition">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <div th:if="${error}" class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+                <span th:text="${error}"></span>
+            </div>
+
+            <div class="bg-white rounded-3xl shadow-sm overflow-hidden">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 border-b">
+                    <tr>
+                        <th class="text-left py-6 px-8 font-semibold">Code</th>
+                        <th class="text-left py-6 px-8 font-semibold">Cr</th>
+                        <th class="text-left py-6 px-8 font-semibold">Course Name</th>
+                        <th class="text-left py-6 px-8 font-semibold">Schedule</th>
+                        <th class="text-left py-6 px-8 font-semibold">Slots</th>
+                        <th class="text-center py-6 px-8 font-semibold w-28">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                    <tr th:each="course : ${courses}" class="hover:bg-gray-50 transition-colors">
+                        <td class="px-8 py-5 font-semibold" th:text="${course.courseCode}"></td>
+                        <td class="px-8 py-5 font-medium" th:text="${course.credits}"></td>
+                        <td class="px-8 py-5"
+                            th:text="${course.courseNameEn != null && !course.courseNameEn.isEmpty() ? course.courseNameEn : course.groupName}"></td>
+                        <td class="px-8 py-5 text-sm" th:utext="${course.scheduleTime}"></td>
+                        <td class="px-8 py-5">
+                            <span th:text="${course.enrolled} + '/' + ${course.capacity}"></span>
+                            <span th:if="${course.hasSlots()}" class="ml-3 inline-block px-3 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full">Open</span>
+                            <span th:unless="${course.hasSlots()}" class="ml-3 inline-block px-3 py-0.5 text-xs font-medium bg-red-100 text-red-700 rounded-full">Full</span>
+                        </td>
+                        <td class="px-8 py-5 text-center">
+                            <button type="button"
+                                    th:attr="data-course-id=${course.id}"
+                                    class="queue-btn px-6 py-2.5 text-sm font-medium rounded-2xl transition"
+                                    th:text="${queuedCourseIds != null and queuedCourseIds.contains(course.id)} ? 'Remove' : 'Add'"
+                                    th:classappend="${queuedCourseIds != null and queuedCourseIds.contains(course.id)}
+                                        ? ' bg-red-600 text-white hover:bg-red-700'
+                                        : ' bg-emerald-600 text-white hover:bg-emerald-700'">
+                                Add
+                            </button>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div th:if="${courses.isEmpty()}" class="mt-10 text-center py-12 text-gray-400">
+                <p>Không có môn học nào phù hợp.</p>
             </div>
         </div>
 
-        <!-- Status -->
-        <div>
-            <label class="block text-sm font-medium mb-1">Status</label>
-            <div class="flex gap-2">
-                <button type="button" onclick="setFilter('status', 'Open')"
-                        class="px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
-                        th:classappend="${status == 'Open'} ? 'bg-emerald-600 text-white border-emerald-600' : ''">
-                    Open
-                </button>
-                <button type="button" onclick="setFilter('status', 'Full')"
-                        class="px-4 py-2 border rounded-lg hover:bg-gray-100 transition"
-                        th:classappend="${status == 'Full'} ? 'bg-red-600 text-white border-red-600' : ''">
-                    Full
-                </button>
+        <div class="xl:col-span-4">
+            <div class="bg-white rounded-3xl shadow-sm p-4 sticky top-24 max-w-[560px] ml-auto">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-bold">Realtime Timetable</h2>
+                    <span id="schedule-status"
+                          class="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">
+                        No conflict
+                    </span>
+                </div>
+
+                <div class="timetable-shell">
+                    <div id="timetable" class="timetable"></div>
+                </div>
             </div>
         </div>
 
-        <input type="hidden" name="keyword" th:value="${keyword}">
-        <input type="hidden" name="availableOnly" th:value="${availableOnly}">
-    </form>
-
-    <!-- Bảng danh sách môn (đã xóa cột Course Name + style lại) -->
-    <div class="bg-white rounded-3xl shadow-sm overflow-hidden">
-        <table class="w-full text-sm">
-            <thead class="bg-gray-50 border-b">
-            <tr>
-                <th class="text-left py-6 px-8 font-semibold">Code</th>
-                <th class="text-left py-6 px-8 font-semibold">Cr</th>
-                <th class="text-left py-6 px-8 font-semibold">Instructor</th>
-                <th class="text-left py-6 px-8 font-semibold">Schedule</th>
-                <th class="text-left py-6 px-8 font-semibold">Slots</th>
-                <th class="text-center py-6 px-8 font-semibold w-28">Actions</th>
-            </tr>
-            </thead>
-            <tbody class="divide-y">
-            <tr th:each="course : ${courses}" class="hover:bg-gray-50 transition-colors">
-                <td class="px-8 py-5 font-semibold" th:text="${course.courseCode}"></td>
-                <td class="px-8 py-5 font-medium" th:text="${course.credits}"></td>
-                <td class="px-8 py-5" th:text="${course.lecturer}"></td>
-                <td class="px-8 py-5 text-sm" th:utext="${course.scheduleTime}"></td>
-                <td class="px-8 py-5">
-                    <span th:text="${course.enrolled} + '/' + ${course.capacity}"></span>
-                    <span th:if="${course.hasSlots()}" class="ml-3 inline-block px-3 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full">Open</span>
-                    <span th:unless="${course.hasSlots()}" class="ml-3 inline-block px-3 py-0.5 text-xs font-medium bg-red-100 text-red-700 rounded-full">Full</span>
-                </td>
-                <td class="px-8 py-5 text-center">
-                    <button th:onclick="'addToQueue(' + ${course.id} + ')'"
-                            class="px-6 py-2.5 text-sm font-medium bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition">
-                        Add
-                    </button>
-                </td>
-            </tr>
-            </tbody>
-        </table>
     </div>
-
-    <!-- Không có dữ liệu -->
-    <div th:if="${courses.isEmpty()}" class="mt-10 text-center py-12 text-gray-400">
-        <p>Không có môn học nào. Vui lòng đồng bộ dữ liệu từ QLDT.</p>
-    </div>
-
 </main>
 
-<script>
+<script th:inline="javascript">
+    const initialRecords = /*[[${myRecords}]]*/ [];
+
     function setFilter(name, value) {
         const form = document.getElementById('filterForm');
         let existing = form.querySelector(`input[name="${name}"]`);
         if (existing) existing.remove();
 
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = name;
-        input.value = value;
-        form.appendChild(input);
+        if (value !== null && value !== undefined && value !== '') {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            form.appendChild(input);
+        }
 
         form.submit();
     }
 
-    function addToQueue(courseId) {
-        if (!confirm('Thêm môn này vào hàng đợi đăng ký?')) return;
+    function parseScheduleEntries(scheduleText) {
+        if (!scheduleText) return [];
 
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/queue/add';
+        return scheduleText
+            .split(/<hr\s*\/?>/i)
+            .map(part => part.trim())
+            .filter(part => part.length > 0)
+            .map(part => {
+                const match = part.match(/Thứ\s*(\d)\s*,\s*tiết\s*(\d+)\s*->\s*(\d+)/i);
 
-        const input = document.createElement('input');
-        input.type = 'hidden'; input.name = 'courseId'; input.value = courseId;
-        form.appendChild(input);
+                if (!match) {
+                    return {
+                        day: null,
+                        start: null,
+                        end: null,
+                        raw: part
+                    };
+                }
 
-        const pri = document.createElement('input');
-        pri.type = 'hidden'; pri.name = 'priority'; pri.value = '1';
-        form.appendChild(pri);
-
-        document.body.appendChild(form);
-        form.submit();
+                return {
+                    day: Number(match[1]),
+                    start: Number(match[2]),
+                    end: Number(match[3]),
+                    raw: part
+                };
+            });
     }
+
+    function buildTimetableGrid() {
+        const timetable = document.getElementById('timetable');
+        timetable.innerHTML = '';
+
+        const dayNames = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+
+        const corner = document.createElement('div');
+        corner.className = 'tt-header-corner';
+        corner.textContent = 'Tiết';
+        timetable.appendChild(corner);
+
+        dayNames.forEach((day, index) => {
+            const header = document.createElement('div');
+            header.className = 'tt-day-header';
+            header.style.gridColumn = `${index + 2}`;
+            header.style.gridRow = '1';
+            header.textContent = day;
+            timetable.appendChild(header);
+        });
+
+        for (let period = 1; period <= 12; period++) {
+            const label = document.createElement('div');
+            label.className = 'tt-period-label';
+            label.style.gridColumn = '1';
+            label.style.gridRow = `${period + 1}`;
+            label.textContent = `Tiết ${period}`;
+            timetable.appendChild(label);
+
+            for (let day = 2; day <= 8; day++) {
+                const cell = document.createElement('div');
+                cell.className = 'tt-cell';
+                cell.style.gridColumn = `${day}`;
+                cell.style.gridRow = `${period + 1}`;
+                timetable.appendChild(cell);
+            }
+        }
+
+        const overlay = document.createElement('div');
+        overlay.id = 'tt-overlay';
+        overlay.className = 'tt-overlay';
+        timetable.appendChild(overlay);
+    }
+
+    function collectPlacements(records) {
+        const placements = [];
+
+        for (const record of records || []) {
+            const course = record.course || {};
+            const entries = parseScheduleEntries(course.scheduleTime || '');
+
+            for (const entry of entries) {
+                if (!entry.day || !entry.start || !entry.end) continue;
+
+                placements.push({
+                    recordId: record.id,
+                    priority: record.priority,
+                    courseCode: course.courseCode || '',
+                    courseName: course.courseNameEn || course.groupName || '',
+                    subGroup: course.subGroup || '',
+                    day: entry.day,
+                    start: entry.start,
+                    end: entry.end,
+                    raw: entry.raw
+                });
+            }
+        }
+
+        return placements;
+    }
+
+    function markConflicts(placements) {
+        const grouped = new Map();
+
+        placements.forEach(p => {
+            for (let tiết = p.start; tiết <= p.end; tiết++) {
+                const key = `${p.day}-${tiết}`;
+                if (!grouped.has(key)) grouped.set(key, []);
+                grouped.get(key).push(p.recordId);
+            }
+        });
+
+        const conflictIds = new Set();
+
+        for (const ids of grouped.values()) {
+            if (ids.length > 1) {
+                ids.forEach(id => conflictIds.add(id));
+            }
+        }
+
+        return conflictIds;
+    }
+
+    function renderVisualSchedule(records) {
+        const overlay = document.getElementById('tt-overlay');
+        const status = document.getElementById('schedule-status');
+        overlay.innerHTML = '';
+
+        if (!records || records.length === 0) {
+            status.textContent = 'No course';
+            status.className = 'text-xs font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-600';
+            return;
+        }
+
+        const placements = collectPlacements(records);
+        const conflictIds = markConflicts(placements);
+
+        if (placements.length === 0) {
+            status.textContent = 'No parsed schedule';
+            status.className = 'text-xs font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-600';
+            return;
+        }
+
+        const rowHeight = 38;
+        const overlayWidth = overlay.clientWidth;
+        const dayWidth = overlayWidth / 7;
+
+        let hasAnyConflict = false;
+
+        placements.forEach((p) => {
+            const isConflict = conflictIds.has(p.recordId);
+            if (isConflict) hasAnyConflict = true;
+
+            const block = document.createElement('div');
+            block.className = `tt-block ${isConflict ? 'tt-block-conflict' : 'tt-block-normal'}`;
+
+            const duration = p.end - p.start + 1;
+            const left = (p.day - 2) * dayWidth + (isConflict ? 8 : 4);
+            const width = dayWidth - (isConflict ? 14 : 8);
+            const top = (p.start - 1) * rowHeight + (isConflict ? 6 : 3);
+            const height = duration * rowHeight - (isConflict ? 8 : 6);
+
+            block.style.left = `${left}px`;
+            block.style.top = `${top}px`;
+            block.style.width = `${width}px`;
+            block.style.height = `${height}px`;
+
+            block.innerHTML = `
+                <div class="tt-block-title">${p.courseName}</div>
+                <div class="tt-block-sub">(${p.courseCode})</div>
+                <div class="tt-block-sub">Nhóm: ${p.subGroup}</div>
+                <div class="tt-block-time">${p.raw}</div>
+            `;
+
+            overlay.appendChild(block);
+        });
+
+        if (hasAnyConflict) {
+            status.textContent = 'Conflict';
+            status.className = 'text-xs font-semibold px-3 py-1 rounded-full bg-red-100 text-red-700';
+        } else {
+            status.textContent = 'No conflict';
+            status.className = 'text-xs font-semibold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700';
+        }
+    }
+
+    async function toggleQueue(courseId, button) {
+        const isRemove = button.dataset.mode === 'remove';
+        const url = isRemove ? '/queue/remove-ajax' : '/queue/add-ajax';
+
+        const formData = new URLSearchParams();
+        formData.append('courseId', courseId);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+            },
+            body: formData.toString()
+        });
+
+        const data = await response.json();
+
+        updateButtonsFromQueue(data.myRecords || []);
+        renderVisualSchedule(data.myRecords || []);
+    }
+
+    function updateButtonsFromQueue(records) {
+        const queuedIds = new Set(
+            (records || [])
+                .map(r => r?.course?.id)
+                .filter(id => id != null)
+        );
+
+        document.querySelectorAll('.queue-btn').forEach(btn => {
+            const courseId = Number(btn.dataset.courseId);
+            const inQueue = queuedIds.has(courseId);
+
+            btn.dataset.mode = inQueue ? 'remove' : 'add';
+            btn.textContent = inQueue ? 'Remove' : 'Add';
+
+            btn.classList.remove(
+                'bg-emerald-600', 'hover:bg-emerald-700',
+                'bg-red-600', 'hover:bg-red-700'
+            );
+
+            if (inQueue) {
+                btn.classList.add('bg-red-600', 'hover:bg-red-700');
+            } else {
+                btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        buildTimetableGrid();
+
+        const currentRecords = initialRecords || [];
+        renderVisualSchedule(currentRecords);
+        updateButtonsFromQueue(currentRecords);
+
+        document.querySelectorAll('.queue-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                toggleQueue(btn.dataset.courseId, btn);
+            });
+        });
+    });
 </script>
 
 </body>
