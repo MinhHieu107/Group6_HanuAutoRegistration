@@ -8,7 +8,8 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-
+import com.hanu.registration.model.RegistrationRecord;
+import java.util.Objects;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,7 +28,6 @@ public class CourseController {
 
     @GetMapping("/courses/search")
     public String searchCourses(
-            @RequestParam(required = false) String department,
             @RequestParam(required = false) String creditsStr,
             @RequestParam(required = false) String status,
             HttpSession session,
@@ -45,18 +45,12 @@ public class CourseController {
         String studentMajorCode = null;
 
         if (accessToken != null && !accessToken.isBlank()) {
-            //studentMajorCode = "FRE";
-            studentMajorCode = qldtStudentService.getStudentMajorCode(accessToken, qldtSession);
+            //studentMajorCode = "KOR";
+            studentMajorCode = "VIP";
+            //studentMajorCode = qldtStudentService.getStudentMajorCode(accessToken, qldtSession);
             courses = qldtCourseService.fetchAllCourses(accessToken, qldtSession, studentMajorCode);
         }
 
-        if (department != null && !department.isBlank() && !"All".equalsIgnoreCase(department)) {
-            String dept = department.trim().toLowerCase();
-            courses = courses.stream()
-                    .filter(c -> c.getDepartment() != null
-                            && c.getDepartment().trim().toLowerCase().equals(dept))
-                    .collect(Collectors.toList());
-        }
 
         if (creditsStr != null && !creditsStr.isBlank()) {
             try {
@@ -78,12 +72,29 @@ public class CourseController {
                     .collect(Collectors.toList());
         }
 
-        model.addAttribute("department", department);
+
         model.addAttribute("creditsStr", creditsStr);
         model.addAttribute("status", status);
         model.addAttribute("courses", courses);
         model.addAttribute("studentMajorCode", studentMajorCode);
+        @SuppressWarnings("unchecked")
+        List<RegistrationRecord> myRecords =
+                (List<RegistrationRecord>) session.getAttribute("myRecords");
 
+        if (myRecords == null) {
+            myRecords = new ArrayList<>();
+            session.setAttribute("myRecords", myRecords);
+        }
+
+        List<Long> queuedCourseIds = myRecords.stream()
+                .map(r -> r.getCourse() != null ? r.getCourse().getId() : null)
+                .filter(Objects::nonNull)
+                .toList();
+
+        model.addAttribute("myRecords", myRecords);
+        model.addAttribute("queuedCourseIds", queuedCourseIds);
+
+        session.setAttribute("currentSearchCourses", courses);
         return "course-filter";
     }
 
