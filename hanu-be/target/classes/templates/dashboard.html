@@ -80,7 +80,7 @@
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm">
                     <span class="material-symbols-outlined text-3xl text-emerald-600 mb-3">analytics</span>
-                    <p class="text-sm font-medium text-gray-500">Total Credits Selected</p>
+                    <p class="text-sm font-medium text-gray-500">Total Courses Selected</p>
                     <p class="text-2xl font-bold mt-1" th:text="${myRecords.size()}"></p>
                 </div>
                 <div class="bg-white p-6 rounded-2xl shadow-sm">
@@ -97,28 +97,40 @@
                     <p class="text-sm text-gray-500">Auto-registration priority queue</p>
                 </div>
 
-                <div th:if="${pendingCount > 0}" class="space-y-4">
+                <div id="queue-list" th:if="${pendingCount > 0}" class="space-y-4">
                     <div th:each="record : ${myRecords}"
                          th:if="${record.status.name() == 'PENDING'}"
-                         class="bg-gray-50 p-5 rounded-2xl flex justify-between items-center">
+                         th:attr="data-course-id=${record.course.id}"
+                         class="queue-record bg-gray-50 p-5 rounded-2xl flex justify-between items-center">
                         <div class="flex items-center gap-4">
                             <div class="w-10 h-10 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center font-bold"
                                  th:text="${record.course.courseCode.substring(0,2)}"></div>
                             <div>
                                 <p class="font-semibold" th:text="${record.course.courseCode}"></p>
-                                <p class="text-sm text-gray-500" th:text="${record.course.groupName} + ' • ' + ${record.course.subGroup}"></p>
+                                <p class="text-sm text-gray-500"
+                                   th:text="${record.course.groupName} + ' • ' + ${record.course.subGroup}"></p>
                             </div>
                         </div>
+
                         <div class="text-right">
-                            <p class="text-xs font-bold text-amber-600">Priority <span th:text="${record.priority}"></span></p>
+                            <p class="text-xs font-bold text-amber-600">
+                                Priority <span class="queue-priority" th:text="${record.priority}"></span>
+                            </p>
                         </div>
-                        <form th:action="@{/queue/remove}" method="post">
-                            <input type="hidden" name="courseId" th:value="${record.course.id}">
-                            <button type="submit" class="text-red-600 text-sm font-medium hover:underline">Remove</button>
-                        </form>
+
+                        <button type="button"
+                                class="dashboard-remove-btn text-red-600 text-sm font-medium hover:underline"
+                                th:attr="data-course-id=${record.course.id}">
+                            Remove
+                        </button>
                     </div>
                 </div>
-                <p th:if="${pendingCount == 0}" class="text-gray-500 py-8 text-center">Chưa có môn nào trong hàng đợi.</p>
+
+                <p id="pending-empty-text"
+                   th:classappend="${pendingCount > 0} ? ' hidden' : ''"
+                   class="text-gray-500 py-8 text-center">
+                    Chưa có môn nào trong hàng đợi.
+                </p>
             </div>
         </div>
 
@@ -145,6 +157,71 @@
 
     </div>
 </main>
+<script>
+    async function removeCourseAjax(courseId) {
+        const formData = new URLSearchParams();
+        formData.append('courseId', courseId);
+
+        const response = await fetch('/queue/remove-ajax', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+            },
+            body: formData.toString()
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            console.log(data.message || 'Remove failed');
+            return;
+        }
+
+        const recordEl = document.querySelector(`.queue-record[data-course-id="${courseId}"]`);
+        if (recordEl) {
+            recordEl.remove();
+        }
+
+        // cập nhật lại priority trên giao diện theo dữ liệu mới
+        const queueRecords = data.myRecords || [];
+        queueRecords
+            .filter(r => r.status && r.status === 'PENDING')
+            .forEach(record => {
+                const el = document.querySelector(`.queue-record[data-course-id="${record.course?.id}"] .queue-priority`);
+                if (el) {
+                    el.textContent = record.priority ?? '';
+                }
+            });
+
+        const remainingItems = document.querySelectorAll('.queue-record').length;
+        const emptyText = document.getElementById('pending-empty-text');
+        const queueList = document.getElementById('queue-list');
+
+        if (remainingItems === 0) {
+            if (emptyText) {
+                emptyText.classList.remove('hidden');
+            }
+            if (queueList) {
+                queueList.classList.add('hidden');
+            }
+        } else {
+            if (emptyText) {
+                emptyText.classList.add('hidden');
+            }
+            if (queueList) {
+                queueList.classList.remove('hidden');
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.dashboard-remove-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                removeCourseAjax(btn.dataset.courseId);
+            });
+        });
+    });
+</script>
 
 </body>
 </html>

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HANU Automatic Registration - Timetable</title>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2 { font-family: 'Manrope', sans-serif; }
+
+        /* ===== TIMETABLE ===== */
+
+        .tt-grid {
+            min-width: 1080px;
+            display: grid;
+            grid-template-columns: 78px repeat(6, 1fr);
+            grid-template-rows: 40px repeat(12, 44px);
+            position: relative;
+            border: 1px solid #d1d5db;
+            border-radius: 18px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .tt-corner {
+            background: #0f6ea8;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 13px;
+            border-right: 1px solid #d1d5db;
+            border-bottom: 1px solid #d1d5db;
+        }
+
+        .tt-day-header {
+            background: #f8fafc;
+            font-weight: 800;
+            font-size: 13px;
+            border-right: 1px solid #d1d5db;
+            border-bottom: 1px solid #d1d5db;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tt-day-header .date {
+            font-size: 10px;
+            color: #6b7280;
+        }
+
+        .tt-period-label {
+            background: #0f6ea8;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            border-right: 1px solid #d1d5db;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .tt-cell {
+            border-right: 1px solid #e5e7eb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .tt-overlay {
+            position: absolute;
+            top: 40px;
+            left: 78px;
+            right: 0;
+            bottom: 0;
+            z-index: 5;
+        }
+
+        .tt-block {
+        position: absolute;
+        border-radius: 10px;
+        padding: 6px 8px;
+        font-size: 10px;
+        border: 1px solid;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+}
+
+        .tt-block-normal {
+            background: #dbeafe;
+            border-color: #60a5fa;
+        }
+
+        .tt-block-conflict {
+            background: #fee2e2;
+            border-color: #ef4444;
+            z-index: 20;
+        }
+
+        .tt-block-title {
+            font-weight: 800;
+            font-size: 11px;
+            margin-bottom: 2px;
+        }
+        .tt-block-sub {
+            font-size: 9px;
+            line-height: 1.2;
+            opacity: 0.95;
+        }
+
+        .tt-block-time {
+            font-size: 9px;
+            line-height: 1.1;
+            margin-top: 3px;
+            opacity: 0.9;
+            font-weight: 600;
+        }
+        .week-nav-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 999px;
+            border: 1px solid #d1d5db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .week-nav-btn:hover {
+            background: #f3f4f6;
+        }
+    </style>
+</head>
+
+<body class="bg-[#f5f7fb] text-slate-900 min-h-screen">
+
+<header class="bg-white flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 border-b">
+    <div class="text-xl font-bold tracking-tight text-[#1A237E]">
+        HANU Automatic Registration
+    </div>
+
+    <nav class="hidden md:flex items-center gap-8">
+        <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/dashboard">Dashboard</a>
+        <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/courses/search">Course Search</a>
+        <a class="text-[#1A237E] font-bold border-b-2 border-[#1A237E] pb-1" href="/timetable">Timetable</a>
+        <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/history">History</a>
+    </nav>
+
+    <div class="flex items-center gap-4">
+        <button class="p-2 text-slate-600 hover:bg-[#f3f3f3] rounded-full transition-all">
+            <span class="material-symbols-outlined">notifications</span>
+        </button>
+
+        <div class="flex items-center gap-3 pl-2 border-l">
+            <div class="text-right hidden sm:block">
+                <p class="text-sm font-bold" th:text="${session.studentId} ?: 'Guest'"></p>
+            </div>
+
+            <a href="/logout"
+               class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center hover:bg-red-100">
+                <span class="material-symbols-outlined text-red-600">logout</span>
+            </a>
+        </div>
+    </div>
+</header>
+
+<main class="max-w-[1450px] mx-auto px-6 py-4">
+
+    <!-- HEADER -->
+    <div class="bg-white p-4 rounded-xl mb-4 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-[#1A237E]">Weekly Timetable</h1>
+            <p class="text-sm text-gray-500">Auto update theo tuần</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <button id="prevWeekBtn" class="week-nav-btn">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </button>
+
+            <div class="px-4 py-2 bg-gray-100 rounded-xl text-sm font-bold" id="weekLabel"></div>
+
+            <button id="nextWeekBtn" class="week-nav-btn">
+                <span class="material-symbols-outlined">arrow_forward</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- TIMETABLE -->
+    <div class="bg-white p-4 rounded-xl">
+        <div class="flex justify-between mb-3">
+            <h2 class="font-bold text-lg">Academic Schedule</h2>
+            <span id="scheduleStatus" class="text-xs px-3 py-1 rounded-full bg-green-100">No conflict</span>
+        </div>
+
+        <div id="timetableGrid" class="tt-grid"></div>
+    </div>
+
+</main>
+
+<script th:inline="javascript">
+    const initialRecords = /*[[${myRecords}]]*/ [];
+
+    const DAYS = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'];
+    let currentWeekStart = getMonday(new Date());
+
+    function getMonday(date){
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = day === 0 ? -6 : 1 - day;
+        d.setDate(d.getDate() + diff);
+        d.setHours(0,0,0,0);
+        return d;
+    }
+
+    function addDays(d,n){
+        const x = new Date(d);
+        x.setDate(x.getDate()+n);
+        return x;
+    }
+
+    function format(d){
+        return d.toLocaleDateString('vi-VN');
+    }
+
+    function updateWeek(){
+        const end = addDays(currentWeekStart,5);
+        document.getElementById('weekLabel').innerText =
+            format(currentWeekStart) + " - " + format(end);
+    }
+
+    function buildGrid(){
+        const grid = document.getElementById('timetableGrid');
+        grid.innerHTML = '';
+
+        const corner = document.createElement('div');
+        corner.className = 'tt-corner';
+        corner.innerText = 'Tiết';
+        grid.appendChild(corner);
+
+        DAYS.forEach((d,i)=>{
+            const h = document.createElement('div');
+            h.className='tt-day-header';
+            h.style.gridColumn = i+2;
+            h.innerHTML = `<div>${d}</div><div class="date">${format(addDays(currentWeekStart,i))}</div>`;
+            grid.appendChild(h);
+        });
+
+        for(let p=1;p<=12;p++){
+            const label = document.createElement('div');
+            label.className='tt-period-label';
+            label.style.gridRow = p+1;
+            label.innerText='Tiết '+p;
+            grid.appendChild(label);
+
+            for(let d=2;d<=7;d++){
+                const c = document.createElement('div');
+                c.className='tt-cell';
+                c.style.gridRow = p+1;
+                c.style.gridColumn = d;
+                grid.appendChild(c);
+            }
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className='tt-overlay';
+        overlay.id='overlay';
+        grid.appendChild(overlay);
+    }
+
+    function parseFlexibleDate(text) {
+    const m = text.match(/^(\d{2})\/(\d{2})\/(\d{2}|\d{4})$/);
+    if (!m) return null;
+
+    const day = Number(m[1]);
+    const month = Number(m[2]) - 1;
+    let year = Number(m[3]);
+
+    if (year < 100) {
+        year = 2000 + year;
+    }
+
+    const d = new Date(year, month, day);
+    d.setHours(0, 0, 0, 0);
+    return d;
+}
+
+function parseDateRangeFromRaw(raw) {
+    const matches = [...raw.matchAll(/(\d{2}\/\d{2}\/\d{2,4})/g)];
+
+    if (matches.length === 0) return null;
+
+    if (matches.length === 1) {
+        const onlyDate = parseFlexibleDate(matches[0][1]);
+        if (!onlyDate) return null;
+
+        return {
+            start: onlyDate,
+            end: onlyDate
+        };
+    }
+
+    const start = parseFlexibleDate(matches[0][1]);
+    const end = parseFlexibleDate(matches[1][1]);
+
+    if (!start || !end) return null;
+
+    return { start, end };
+}
+
+function isEntryInCurrentWeek(dateRange) {
+    if (!dateRange) return false;
+
+    const weekStart = new Date(currentWeekStart);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = addDays(weekStart, 5);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    return dateRange.start <= weekEnd && dateRange.end >= weekStart;
+}
+    function collectPlacements(records) {
+    const placements = [];
+
+    records.forEach(r => {
+        const c = r.course;
+        if (!c || !c.scheduleTime) return;
+
+        c.scheduleTime.split('<hr>').forEach(raw => {
+            const x = raw.trim();
+            const m = x.match(/Thứ\s*(\d).*tiết\s*(\d+)->(\d+)/);
+            if (!m) return;
+
+            const dateRange = parseDateRangeFromRaw(x);
+            if (!isEntryInCurrentWeek(dateRange)) return;
+
+            const day = Number(m[1]);
+            if (day < 2 || day > 7) return; // bỏ CN
+
+            placements.push({
+                recordId: r.id,
+                course: c,
+                raw: x,
+                day: day,
+                start: Number(m[2]),
+                end: Number(m[3]),
+                dateRange: dateRange
+            });
+        });
+    });
+
+    return placements;
+}
+
+function detectConflictIds(placements) {
+    const slotMap = new Map();
+    const conflictIds = new Set();
+
+    placements.forEach(p => {
+        for (let period = p.start; period <= p.end; period++) {
+            const key = `${p.day}-${period}`;
+            if (!slotMap.has(key)) {
+                slotMap.set(key, [p.recordId]);
+            } else {
+                slotMap.get(key).push(p.recordId);
+            }
+        }
+    });
+
+    slotMap.forEach(ids => {
+        if (ids.length > 1) {
+            ids.forEach(id => conflictIds.add(id));
+        }
+    });
+
+    return conflictIds;
+}
+    function render(records){
+    buildGrid();
+    updateWeek();
+
+    const overlay = document.getElementById('overlay');
+    const status = document.getElementById('scheduleStatus');
+    const rowHeight = 44;
+    const colWidth = overlay.clientWidth / 6;
+
+    const placements = collectPlacements(records);
+    const conflictIds = detectConflictIds(placements);
+
+    let hasConflict = false;
+
+    placements.forEach(p => {
+        const c = p.course;
+        const isConflict = conflictIds.has(p.recordId);
+
+        if (isConflict) {
+            hasConflict = true;
+        }
+
+        const block = document.createElement('div');
+        block.className = isConflict ? 'tt-block tt-block-conflict' : 'tt-block tt-block-normal';
+
+        block.style.left = ((p.day - 2) * colWidth + (isConflict ? 8 : 0)) + 'px';
+        block.style.top = ((p.start - 1) * rowHeight + (isConflict ? 4 : 0)) + 'px';
+        block.style.width = (colWidth - (isConflict ? 12 : 6)) + 'px';
+        block.style.height = ((p.end - p.start + 1) * rowHeight - 4) + 'px';
+
+        const shortTime = `T${p.day} • ${p.start}-${p.end}`;
+
+        block.innerHTML = `
+            <div class="tt-block-title">${c.courseCode || ''}</div>
+            <div class="tt-block-sub">${c.courseNameEn || c.groupName || ''}</div>
+            <div class="tt-block-sub">Nhóm: ${c.subGroup || ''}</div>
+            <div class="tt-block-time">${shortTime}</div>
+        `;
+
+        overlay.appendChild(block);
+    });
+
+    if (hasConflict) {
+        status.textContent = 'Conflict detected';
+        status.className = 'text-xs px-3 py-1 rounded-full bg-red-100 text-red-700';
+    } else {
+        status.textContent = 'No conflict';
+        status.className = 'text-xs px-3 py-1 rounded-full bg-green-100 text-green-700';
+    }
+}
+
+    document.getElementById('prevWeekBtn').onclick = ()=>{
+        currentWeekStart = addDays(currentWeekStart,-7);
+        render(initialRecords);
+    };
+
+    document.getElementById('nextWeekBtn').onclick = ()=>{
+        currentWeekStart = addDays(currentWeekStart,7);
+        render(initialRecords);
+    };
+
+    document.addEventListener('DOMContentLoaded', ()=>{
+        render(initialRecords);
+    });
+</script>
+
+</body>
+</html>
