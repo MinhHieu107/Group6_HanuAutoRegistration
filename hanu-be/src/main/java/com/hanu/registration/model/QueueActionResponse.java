@@ -22,28 +22,28 @@ public class QueueActionResponse {
         return success;
     }
 
-    public String getMessage() {
-        return message;
-    }
-
-    public boolean isInQueue() {
-        return inQueue;
-    }
-
-    public List<RegistrationRecord> getMyRecords() {
-        return myRecords;
-    }
-
     public void setSuccess(boolean success) {
         this.success = success;
+    }
+
+    public String getMessage() {
+        return message;
     }
 
     public void setMessage(String message) {
         this.message = message;
     }
 
+    public boolean isInQueue() {
+        return inQueue;
+    }
+
     public void setInQueue(boolean inQueue) {
         this.inQueue = inQueue;
+    }
+
+    public List<RegistrationRecord> getMyRecords() {
+        return myRecords;
     }
 
     public void setMyRecords(List<RegistrationRecord> myRecords) {

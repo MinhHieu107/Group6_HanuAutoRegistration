@@ -21,9 +21,9 @@
         }
 
         .timetable {
-            min-width: 520px;
+            min-width: 470px;
             display: grid;
-            grid-template-columns: 52px repeat(7, 1fr);
+            grid-template-columns: 52px repeat(6, 1fr);
             grid-template-rows: 34px repeat(12, 38px);
             position: relative;
             border: 1px solid #d1d5db;
@@ -87,19 +87,31 @@
 
         .tt-block {
             position: absolute;
-            border-radius: 12px;
+            border-radius: 10px;
             padding: 4px 6px;
             overflow: hidden;
-            font-size: 9px;
-            line-height: 1.2;
+            line-height: 1.15;
             border: 1px solid;
             box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+            font-size: 8px;
         }
 
         .tt-block-normal {
             background: #dbeafe;
             border-color: #60a5fa;
             color: #1e3a8a;
+        }
+
+        .tt-block-secondary {
+            background: #fef3c7;
+            border-color: #f59e0b;
+            color: #92400e;
+        }
+
+        .tt-block-tertiary {
+            background: #ede9fe;
+            border-color: #8b5cf6;
+            color: #5b21b6;
         }
 
         .tt-block-conflict {
@@ -118,12 +130,14 @@
         .tt-block-sub {
             font-size: 8px;
             opacity: 0.95;
+            line-height: 1.15;
         }
 
         .tt-block-time {
             font-size: 8px;
-            margin-top: 4px;
+            margin-top: 3px;
             opacity: 0.9;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -137,7 +151,7 @@
         <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/dashboard">Dashboard</a>
         <a class="text-[#1A237E] font-bold border-b-2 border-[#1A237E] pb-1" href="/courses/search">Course Search</a>
         <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/timetable">Timetable</a>
-        <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="#">History</a>
+        <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/history">History</a>
     </nav>
     <div class="flex items-center gap-4">
         <button class="p-2 text-slate-600 hover:bg-[#f3f3f3] rounded-full transition-all">
@@ -165,7 +179,6 @@
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
 
         <div class="xl:col-span-8">
-
             <form id="filterForm" th:action="@{/courses/search}" method="get" class="flex flex-wrap gap-6 mb-8">
                 <div>
                     <label class="block text-sm font-medium mb-1">Credits</label>
@@ -300,6 +313,48 @@
         form.submit();
     }
 
+    function parseFlexibleDate(text) {
+        const m = text.match(/^(\d{2})\/(\d{2})\/(\d{2}|\d{4})$/);
+        if (!m) return null;
+
+        const day = Number(m[1]);
+        const month = Number(m[2]) - 1;
+        let year = Number(m[3]);
+
+        if (year < 100) year = 2000 + year;
+
+        const d = new Date(year, month, day);
+        d.setHours(0, 0, 0, 0);
+        return d;
+    }
+
+    function parseDateRangeFromRaw(raw) {
+        const matches = [...raw.matchAll(/(\d{2}\/\d{2}\/(?:\d{2}|\d{4}))/g)];
+
+        if (matches.length === 0) return null;
+
+        if (matches.length === 1) {
+            const onlyDate = parseFlexibleDate(matches[0][1]);
+            if (!onlyDate) return null;
+            return { start: onlyDate, end: onlyDate };
+        }
+
+        const start = parseFlexibleDate(matches[0][1]);
+        const end = parseFlexibleDate(matches[1][1]);
+
+        if (!start || !end) return null;
+        return { start, end };
+    }
+
+    function rangesOverlap(a, b) {
+        if (!a || !b) return false;
+        return a.start <= b.end && b.start <= a.end;
+    }
+
+    function periodsOverlap(a, b) {
+        return a.start <= b.end && b.start <= a.end;
+    }
+
     function parseScheduleEntries(scheduleText) {
         if (!scheduleText) return [];
 
@@ -309,13 +364,15 @@
             .filter(part => part.length > 0)
             .map(part => {
                 const match = part.match(/Thứ\s*(\d)\s*,\s*tiết\s*(\d+)\s*->\s*(\d+)/i);
+                const dateRange = parseDateRangeFromRaw(part);
 
                 if (!match) {
                     return {
                         day: null,
                         start: null,
                         end: null,
-                        raw: part
+                        raw: part,
+                        dateRange: dateRange
                     };
                 }
 
@@ -323,7 +380,8 @@
                     day: Number(match[1]),
                     start: Number(match[2]),
                     end: Number(match[3]),
-                    raw: part
+                    raw: part,
+                    dateRange: dateRange
                 };
             });
     }
@@ -332,7 +390,7 @@
         const timetable = document.getElementById('timetable');
         timetable.innerHTML = '';
 
-        const dayNames = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'CN'];
+        const dayNames = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
 
         const corner = document.createElement('div');
         corner.className = 'tt-header-corner';
@@ -356,7 +414,7 @@
             label.textContent = `Tiết ${period}`;
             timetable.appendChild(label);
 
-            for (let day = 2; day <= 8; day++) {
+            for (let day = 2; day <= 7; day++) {
                 const cell = document.createElement('div');
                 cell.className = 'tt-cell';
                 cell.style.gridColumn = `${day}`;
@@ -380,17 +438,20 @@
 
             for (const entry of entries) {
                 if (!entry.day || !entry.start || !entry.end) continue;
+                if (entry.day < 2 || entry.day > 7) continue;
 
                 placements.push({
                     recordId: record.id,
                     priority: record.priority,
+                    courseId: course.id,
                     courseCode: course.courseCode || '',
                     courseName: course.courseNameEn || course.groupName || '',
                     subGroup: course.subGroup || '',
                     day: entry.day,
                     start: entry.start,
                     end: entry.end,
-                    raw: entry.raw
+                    raw: entry.raw,
+                    dateRange: entry.dateRange
                 });
             }
         }
@@ -398,26 +459,66 @@
         return placements;
     }
 
-    function markConflicts(placements) {
-        const grouped = new Map();
+    function detectConflictKeys(placements) {
+        const conflictKeys = new Set();
 
-        placements.forEach(p => {
-            for (let tiết = p.start; tiết <= p.end; tiết++) {
-                const key = `${p.day}-${tiết}`;
-                if (!grouped.has(key)) grouped.set(key, []);
-                grouped.get(key).push(p.recordId);
-            }
-        });
+        for (let i = 0; i < placements.length; i++) {
+            for (let j = i + 1; j < placements.length; j++) {
+                const a = placements[i];
+                const b = placements[j];
 
-        const conflictIds = new Set();
+                if (a.day !== b.day) continue;
+                if (!periodsOverlap(a, b)) continue;
+                if (!rangesOverlap(a.dateRange, b.dateRange)) continue;
 
-        for (const ids of grouped.values()) {
-            if (ids.length > 1) {
-                ids.forEach(id => conflictIds.add(id));
+                conflictKeys.add(`${a.recordId}|${a.day}|${a.start}|${a.end}|${a.raw}`);
+                conflictKeys.add(`${b.recordId}|${b.day}|${b.start}|${b.end}|${b.raw}`);
             }
         }
 
-        return conflictIds;
+        return conflictKeys;
+    }
+
+    function groupSharedSlotNonConflict(placements, conflictKeys) {
+        const groups = new Map();
+
+        placements.forEach(p => {
+            const pKey = `${p.recordId}|${p.day}|${p.start}|${p.end}|${p.raw}`;
+            if (conflictKeys.has(pKey)) return;
+
+            const slotKey = `${p.day}|${p.start}|${p.end}`;
+            if (!groups.has(slotKey)) groups.set(slotKey, []);
+            groups.get(slotKey).push(p);
+        });
+
+        return groups;
+    }
+
+    function renderSplitBlock(parent, items, left, top, width, height) {
+        const colors = ['tt-block-normal', 'tt-block-secondary', 'tt-block-tertiary'];
+        const visibleItems = items.slice(0, 3);
+        const partHeight = height / visibleItems.length;
+
+        visibleItems.forEach((item, index) => {
+            const block = document.createElement('div');
+            block.className = `tt-block ${colors[index]}`;
+
+            block.style.left = `${left}px`;
+            block.style.top = `${top + index * partHeight}px`;
+            block.style.width = `${width}px`;
+            block.style.height = `${partHeight - 2}px`;
+
+            const shortTime = `T${item.day} • ${item.start}-${item.end}`;
+
+            block.innerHTML = `
+                <div class="tt-block-title">${item.courseCode}</div>
+                <div class="tt-block-sub">${item.courseName}</div>
+                <div class="tt-block-sub">Nhóm: ${item.subGroup}</div>
+                <div class="tt-block-time">${shortTime}</div>
+            `;
+
+            parent.appendChild(block);
+        });
     }
 
     function renderVisualSchedule(records) {
@@ -432,24 +533,43 @@
         }
 
         const placements = collectPlacements(records);
-        const conflictIds = markConflicts(placements);
-
         if (placements.length === 0) {
             status.textContent = 'No parsed schedule';
             status.className = 'text-xs font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-600';
             return;
         }
 
+        const conflictKeys = detectConflictKeys(placements);
+        const sharedGroups = groupSharedSlotNonConflict(placements, conflictKeys);
+
         const rowHeight = 38;
         const overlayWidth = overlay.clientWidth;
-        const dayWidth = overlayWidth / 7;
+        const dayWidth = overlayWidth / 6;
 
-        let hasAnyConflict = false;
+        const renderedKeys = new Set();
+        let hasAnyConflict = conflictKeys.size > 0;
+
+        for (const [slotKey, items] of sharedGroups.entries()) {
+            const [day, start, end] = slotKey.split('|').map(Number);
+            const duration = end - start + 1;
+            const left = (day - 2) * dayWidth + 4;
+            const width = dayWidth - 8;
+            const top = (start - 1) * rowHeight + 3;
+            const height = duration * rowHeight - 6;
+
+            if (items.length >= 2) {
+                renderSplitBlock(overlay, items, left, top, width, height);
+                items.slice(0, 3).forEach(item => {
+                    renderedKeys.add(`${item.recordId}|${item.day}|${item.start}|${item.end}|${item.raw}`);
+                });
+            }
+        }
 
         placements.forEach((p) => {
-            const isConflict = conflictIds.has(p.recordId);
-            if (isConflict) hasAnyConflict = true;
+            const pKey = `${p.recordId}|${p.day}|${p.start}|${p.end}|${p.raw}`;
+            if (renderedKeys.has(pKey)) return;
 
+            const isConflict = conflictKeys.has(pKey);
             const block = document.createElement('div');
             block.className = `tt-block ${isConflict ? 'tt-block-conflict' : 'tt-block-normal'}`;
 
@@ -464,11 +584,13 @@
             block.style.width = `${width}px`;
             block.style.height = `${height}px`;
 
+            const shortTime = `T${p.day} • ${p.start}-${p.end}`;
+
             block.innerHTML = `
-                <div class="tt-block-title">${p.courseName}</div>
-                <div class="tt-block-sub">(${p.courseCode})</div>
+                <div class="tt-block-title">${p.courseCode}</div>
+                <div class="tt-block-sub">${p.courseName}</div>
                 <div class="tt-block-sub">Nhóm: ${p.subGroup}</div>
-                <div class="tt-block-time">${p.raw}</div>
+                <div class="tt-block-time">${shortTime}</div>
             `;
 
             overlay.appendChild(block);
