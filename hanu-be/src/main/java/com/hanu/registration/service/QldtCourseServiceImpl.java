@@ -58,11 +58,13 @@ public class QldtCourseServiceImpl implements QldtCourseService {
 
             if (dsNhomTo == null) return new ArrayList<>();
 
+            Set<String> normalCourseKeys = buildNormalCourseKeys(dsNhomTo);
+
             List<Course> courses = new ArrayList<>();
             AtomicLong idGen = new AtomicLong(1);
 
             for (Map<String, Object> item : dsNhomTo) {
-                Course course = mapToCourse(item, idGen.getAndIncrement(), majorCode);
+                Course course = mapToCourse(item, idGen.getAndIncrement(), majorCode, normalCourseKeys);
                 if (course != null) {
                     courses.add(course);
                 }
@@ -102,13 +104,17 @@ public class QldtCourseServiceImpl implements QldtCourseService {
         return headers;
     }
 
-    private Course mapToCourse(Map<String, Object> item, Long id, String majorCode) {
+    private Course mapToCourse(Map<String, Object> item,
+                               Long id,
+                               String majorCode,
+                               Set<String> normalCourseKeys) {
+
         String courseCode = getString(item, "ma_mon");
         String courseName = getString(item, "ten_mon");
         String courseNameEn = getString(item, "ten_mon_eg");
         String subGroup = getString(item, "nhom_to");
 
-        if (!matchesMajor(item, courseCode, courseName, courseNameEn, majorCode)) {
+        if (!matchesMajor(courseCode, majorCode, normalCourseKeys)) {
             return null;
         }
 
@@ -118,12 +124,9 @@ public class QldtCourseServiceImpl implements QldtCourseService {
         course.setGroupName(firstNonBlank(courseName, courseNameEn, courseCode));
         course.setCourseNameEn(courseNameEn);
         course.setSubGroup(subGroup);
-        course.setCredits((Integer) extractCredits(item));
+        course.setCredits(extractCredits(item));
         course.setScheduleTime(extractSchedule(item));
-
-        // Không dùng giảng viên nữa
         course.setLecturer("");
-
         course.setEnrolled(extractInt(item, "sl_dk"));
         course.setCapacity(extractInt(item, "sl_cp"));
         course.setDepartment(majorCode != null ? majorCode : "Unknown");
@@ -131,29 +134,78 @@ public class QldtCourseServiceImpl implements QldtCourseService {
         return course;
     }
 
-    private boolean matchesMajor(Map<String, Object> item,
-                                 String courseCode,
-                                 String courseName,
-                                 String courseNameEn,
-                                 String majorCode) {
-
-        if (majorCode == null || majorCode.isBlank()) {
-            return true;
-        }
-
-        if (courseCode == null) {
+    private boolean matchesMajor(String courseCode,
+                                 String majorCode,
+                                 Set<String> normalCourseKeys) {
+        if (courseCode == null || majorCode == null || majorCode.isBlank()) {
             return false;
         }
 
-        String code = courseCode.toUpperCase();
-        String major = majorCode.trim().toUpperCase();
+        String code = courseCode.toUpperCase().trim();
+        String major = majorCode.toUpperCase().trim();
 
-        return code.contains(major);
+        // ===== MÔN CHUNG: luôn hiện cho mọi sinh viên =====
+        if (code.contains("PED") || code.contains("PML")) {
+            return true;
+        }
+        String baseMajor = major.split("\\.")[0];
+        boolean studentIsCLC = major.endsWith(".CLC");
+        // Phải đúng khoa trước
+        if (!code.contains(baseMajor)) {
+            return false;
+        }
+
+        String prefix = extractPrefix(code);
+        String core = extractCoreCode(code);
+        if (prefix == null || core == null) {
+            return false;
+        }
+        int prefixNumber;
+        try {
+            prefixNumber = Integer.parseInt(prefix);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        String previousKey = String.format("%02d|%s", prefixNumber - 1, core);
+        if (studentIsCLC) {
+            return normalCourseKeys.contains(previousKey);
+        }
+        return !normalCourseKeys.contains(previousKey);
+    }
+    private Set<String> buildNormalCourseKeys(List<Map<String, Object>> dsNhomTo) {
+        Set<String> normalKeys = new HashSet<>();
+
+        for (Map<String, Object> item : dsNhomTo) {
+            String courseCode = getString(item, "ma_mon");
+            if (courseCode == null || courseCode.length() < 3) {
+                continue;
+            }
+
+            String prefix = extractPrefix(courseCode);
+            String core = extractCoreCode(courseCode);
+
+            if (prefix == null || core == null) {
+                continue;
+            }
+
+            normalKeys.add(prefix + "|" + core);
+        }
+
+        return normalKeys;
     }
 
-    private boolean containsIgnoreCase(String source, String target) {
-        return source != null && target != null
-                && source.toUpperCase().contains(target.toUpperCase());
+    private String extractPrefix(String courseCode) {
+        if (courseCode == null || courseCode.length() < 2) {
+            return null;
+        }
+        String prefix = courseCode.substring(0, 2);
+        return prefix.chars().allMatch(Character::isDigit) ? prefix : null;
+    }
+    private String extractCoreCode(String courseCode) {
+        if (courseCode == null || courseCode.length() <= 2) {
+            return null;
+        }
+        return courseCode.substring(2).toUpperCase().trim();
     }
 
     private Integer extractCredits(Map<String, Object> item) {
@@ -171,12 +223,10 @@ public class QldtCourseServiceImpl implements QldtCourseService {
         }
 
         try {
-
             return Integer.parseInt(String.valueOf(value).trim());
         } catch (NumberFormatException ignored) {
             return 0;
         }
-
     }
 
     private String extractSchedule(Map<String, Object> item) {
