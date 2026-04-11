@@ -5,187 +5,265 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HANU Automatic Registration - Dashboard</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-    <script id="tailwind-config">
-        tailwind.config = { darkMode: "class" }
-    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <style>
         body { font-family: 'Inter', sans-serif; }
         h1, h2, h3 { font-family: 'Manrope', sans-serif; }
     </style>
 </head>
-<body class="bg-surface text-on-surface min-h-screen">
+<body class="bg-[#f5f7fb] text-slate-900 min-h-screen">
 
-<!-- Header -->
-<header class="bg-[#f9f9f9] flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 border-b">
+<header class="bg-white flex justify-between items-center w-full px-8 py-4 sticky top-0 z-50 border-b">
     <div class="text-xl font-bold tracking-tight text-[#1A237E]">
         HANU Automatic Registration
     </div>
+
     <nav class="hidden md:flex items-center gap-8">
         <a class="text-[#1A237E] font-bold border-b-2 border-[#1A237E] pb-1" href="/dashboard">Dashboard</a>
         <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/courses/search">Course Search</a>
         <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/timetable">Timetable</a>
-        <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="#">History</a>
+        <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/history">History</a>
+        <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/mock-qldt">Mock QLĐT</a>
     </nav>
+
     <div class="flex items-center gap-4">
         <button class="p-2 text-slate-600 hover:bg-[#f3f3f3] rounded-full transition-all">
             <span class="material-symbols-outlined">notifications</span>
         </button>
         <div class="flex items-center gap-3 pl-2 border-l">
             <div class="text-right hidden sm:block">
-                <p class="text-sm font-bold" th:text="${session.studentId} ?: 'Guest'"></p>
-                <p class="text-[10px] uppercase tracking-wider text-gray-500">Student</p>
+                <p class="text-sm font-bold" th:text="${fullName} ?: 'Student'"></p>
+                <p class="text-xs text-slate-500" th:text="${studentId} ?: 'Guest'"></p>
             </div>
             <a href="/logout"
-               class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center hover:bg-red-100 transition-colors">
+               class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center hover:bg-red-100">
                 <span class="material-symbols-outlined text-red-600">logout</span>
             </a>
         </div>
     </div>
 </header>
 
-<main class="max-w-7xl mx-auto px-8 py-10">
-
-    <!-- Welcome -->
-    <section class="mb-12">
-        <h1 class="text-4xl font-extrabold text-primary mb-2 tracking-tight">Academic Overview</h1>
-        <p class="text-on-surface-variant">
-            Welcome back,
-            <span th:text="${session.fullName != null ? session.fullName : session.studentId}"></span>
+<main class="max-w-[1450px] mx-auto px-6 py-6">
+    <div class="mb-6">
+        <h1 class="text-3xl font-extrabold text-[#1A237E]">Welcome back</h1>
+        <p class="text-slate-500 mt-1">
+            Manage your queue, configure auto-registration rules, and monitor the engine state.
         </p>
+    </div>
+
+    <!-- SUMMARY -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+        <div class="bg-white rounded-3xl shadow-sm p-6">
+            <p class="text-sm text-slate-500 mb-2">Pending Requests</p>
+            <p class="text-3xl font-extrabold text-[#1A237E]" th:text="${pendingCount} ?: 0">0</p>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm p-6">
+            <p class="text-sm text-slate-500 mb-2">Queued Credits</p>
+            <p class="text-3xl font-extrabold text-[#1A237E]" id="queuedCreditsText">0</p>
+        </div>
+
+        <div class="bg-white rounded-3xl shadow-sm p-6">
+            <p class="text-sm text-slate-500 mb-2">Current Role</p>
+            <p class="text-2xl font-bold text-[#1A237E]" th:text="${roles} ?: 'SINHVIEN'">SINHVIEN</p>
+        </div>
     </section>
 
-    <!-- Messages -->
-    <div th:if="${msg}" class="bg-green-100 border border-green-400 text-green-700 px-6 py-4 rounded-xl mb-8 flex items-center gap-3">
-        <span class="material-symbols-outlined">check_circle</span>
-        <span th:text="${msg}"></span>
-    </div>
-    <div th:if="${error}" class="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-xl mb-8 flex items-center gap-3">
-        <span class="material-symbols-outlined">error</span>
-        <span th:text="${error}"></span>
-    </div>
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <!-- LEFT -->
+        <div class="xl:col-span-8 space-y-6">
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- QUEUE -->
+            <section class="bg-white rounded-3xl shadow-sm p-6">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold">Active Requests</h2>
+                        <p class="text-sm text-gray-500">Auto-registration priority queue</p>
+                    </div>
 
-        <!-- Left Content -->
-        <div class="lg:col-span-8 space-y-6">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button id="startAutoBtn"
+                                type="button"
+                                onclick="startAutoRegistration()"
+                                class="px-4 py-2.5 rounded-2xl bg-green-600 text-white font-medium hover:bg-green-700 transition flex items-center gap-2">
+                            <span class="material-symbols-outlined text-base">play_arrow</span>
+                            Start Auto
+                        </button>
 
-            <!-- Overview Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <span class="material-symbols-outlined text-3xl text-blue-600 mb-3">event_available</span>
-                    <p class="text-sm font-medium text-gray-500">Registration Status</p>
-                    <p class="text-2xl font-bold mt-1">Ready</p>
+                        <button id="stopAutoBtn"
+                                type="button"
+                                onclick="stopAutoRegistration()"
+                                class="px-4 py-2.5 rounded-2xl bg-red-600 text-white font-medium hover:bg-red-700 transition flex items-center gap-2">
+                            <span class="material-symbols-outlined text-base">stop</span>
+                            Stop
+                        </button>
+
+                        <button id="resetMockBtn"
+                                type="button"
+                                onclick="resetMockState()"
+                                class="px-4 py-2.5 rounded-2xl bg-slate-700 text-white font-medium hover:bg-slate-800 transition flex items-center gap-2">
+                            <span class="material-symbols-outlined text-base">restart_alt</span>
+                            Reset Mock State
+                        </button>
+                    </div>
                 </div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <span class="material-symbols-outlined text-3xl text-emerald-600 mb-3">analytics</span>
-                    <p class="text-sm font-medium text-gray-500">Total Courses Selected</p>
-                    <p class="text-2xl font-bold mt-1" th:text="${myRecords.size()}"></p>
-                </div>
-                <div class="bg-white p-6 rounded-2xl shadow-sm">
-                    <span class="material-symbols-outlined text-3xl text-amber-600 mb-3">schedule</span>
-                    <p class="text-sm font-medium text-gray-500">Next Window</p>
-                    <p class="text-lg font-semibold mt-1">Open soon</p>
-                </div>
-            </div>
 
-            <!-- Active Requests (Hàng đợi) -->
-            <div class="bg-white rounded-3xl shadow-sm p-8">
+                <div th:if="${myRecords == null or #lists.isEmpty(myRecords)}"
+                     class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center text-slate-500">
+                    No course in queue yet.
+                </div>
+
+                <div th:if="${myRecords != null and !#lists.isEmpty(myRecords)}" class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                        <tr class="border-b text-slate-500">
+                            <th class="text-left py-4 pr-4">Priority</th>
+                            <th class="text-left py-4 pr-4">Code</th>
+                            <th class="text-left py-4 pr-4">Course Name</th>
+                            <th class="text-left py-4 pr-4">Credits</th>
+                            <th class="text-left py-4 pr-4">Schedule</th>
+                            <th class="text-left py-4 pr-4">Status</th>
+                            <th class="text-right py-4">Action</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="record : ${myRecords}"
+                            class="border-b last:border-0 hover:bg-slate-50 transition"
+                            th:attr="data-course-id=${record.course.id}">
+                            <td class="py-4 pr-4 font-semibold" th:text="${record.priority}">1</td>
+                            <td class="py-4 pr-4 font-semibold" th:text="${record.course.courseCode}">61FIT4GRP</td>
+                            <td class="py-4 pr-4"
+                                th:text="${record.course.courseNameEn != null && !record.course.courseNameEn.isEmpty() ? record.course.courseNameEn : record.course.groupName}">
+                                Course Name
+                            </td>
+                            <td class="py-4 pr-4 course-credit"
+                                th:text="${record.course.credits}">3</td>
+                            <td class="py-4 pr-4 text-xs text-slate-500"
+                                th:utext="${record.course.scheduleTime}">
+                                Schedule
+                            </td>
+                            <td class="py-4 pr-4">
+                                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"
+                                      th:text="${record.status}">
+                                    PENDING
+                                </span>
+                            </td>
+                            <td class="py-4 text-right">
+                                <button type="button"
+                                        class="remove-btn px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition"
+                                        th:attr="data-course-id=${record.course.id}">
+                                    Remove
+                                </button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ENGINE STATUS -->
+            <section id="autoEngineStatusBox"
+                     class="bg-white rounded-3xl shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold">Auto Registration Engine</h2>
+                        <p class="text-sm text-gray-500">Live runtime status</p>
+                    </div>
+
+                    <span id="engineStatusBadge"
+                          class="text-xs font-semibold px-3 py-1 rounded-full bg-gray-200 text-gray-700">
+                        IDLE
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div class="bg-slate-50 rounded-2xl p-4">
+                        <p class="text-slate-500 mb-1">Status</p>
+                        <p id="engineStatusText" class="font-semibold text-slate-800">IDLE</p>
+                    </div>
+
+                    <div class="bg-slate-50 rounded-2xl p-4">
+                        <p class="text-slate-500 mb-1">Message</p>
+                        <p id="engineMessageText" class="font-semibold text-slate-800">Chưa chạy</p>
+                    </div>
+
+                    <div class="bg-slate-50 rounded-2xl p-4">
+                        <p class="text-slate-500 mb-1">Last Run</p>
+                        <p id="engineLastRunText" class="font-semibold text-slate-800">-</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- RIGHT -->
+        <div class="xl:col-span-4 space-y-6">
+            <!-- CONFIG RULES -->
+            <section class="bg-white rounded-3xl shadow-sm p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold">Active Requests</h2>
-                    <p class="text-sm text-gray-500">Auto-registration priority queue</p>
+                    <div>
+                        <h2 class="text-xl font-bold">Config Rules</h2>
+                        <p class="text-sm text-gray-500">Thiết lập luật cho auto-registration</p>
+                    </div>
+
+                    <button type="button"
+                            onclick="openRulesModal()"
+                            class="px-5 py-2.5 bg-[#1A237E] text-white rounded-2xl font-medium hover:bg-[#0d145c] transition">
+                        Configure
+                    </button>
                 </div>
 
-                <div id="queue-list" th:if="${pendingCount > 0}" class="space-y-4">
-                    <div th:each="record : ${myRecords}"
-                         th:if="${record.status.name() == 'PENDING'}"
-                         th:attr="data-course-id=${record.course.id}"
-                         class="queue-record bg-gray-50 p-5 rounded-2xl flex justify-between items-center">
-                        <div class="flex items-center gap-4">
-                            <div class="w-10 h-10 bg-blue-100 text-blue-700 rounded-xl flex items-center justify-center font-bold"
-                                 th:text="${record.course.courseCode.substring(0,2)}"></div>
-                            <div>
-                                <p class="font-semibold" th:text="${record.course.courseCode}"></p>
-                                <p class="text-sm text-gray-500"
-                                   th:text="${record.course.groupName} + ' • ' + ${record.course.subGroup}"></p>
-                            </div>
-                        </div>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div class="bg-gray-50 rounded-2xl p-4">
+                        <p class="text-gray-500 mb-1">Auto Registration</p>
+                        <p id="rules-summary-enabled" class="font-semibold text-gray-800">Enabled</p>
+                    </div>
 
-                        <div class="text-right">
-                            <p class="text-xs font-bold text-amber-600">
-                                Priority <span class="queue-priority" th:text="${record.priority}"></span>
-                            </p>
-                        </div>
+                    <div class="bg-gray-50 rounded-2xl p-4">
+                        <p class="text-gray-500 mb-1">Retry Interval</p>
+                        <p id="rules-summary-interval" class="font-semibold text-gray-800">300 ms</p>
+                    </div>
 
-                        <button type="button"
-                                class="dashboard-remove-btn text-red-600 text-sm font-medium hover:underline"
-                                th:attr="data-course-id=${record.course.id}">
-                            Remove
-                        </button>
+                    <div class="bg-gray-50 rounded-2xl p-4">
+                        <p class="text-gray-500 mb-1">Max Retries</p>
+                        <p id="rules-summary-retries" class="font-semibold text-gray-800">3</p>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-2xl p-4">
+                        <p class="text-gray-500 mb-1">Conflict Policy</p>
+                        <p id="rules-summary-conflict" class="font-semibold text-gray-800">Avoid conflicts</p>
                     </div>
                 </div>
+            </section>
 
-                <p id="pending-empty-text"
-                   th:classappend="${pendingCount > 0} ? ' hidden' : ''"
-                   class="text-gray-500 py-8 text-center">
-                    Chưa có môn nào trong hàng đợi.
-                </p>
-            </div>
+            <!-- QUICK LINKS -->
+            <section class="bg-white rounded-3xl shadow-sm p-6">
+                <h2 class="text-xl font-bold mb-4">Quick Links</h2>
+
+                <div class="grid gap-3">
+                    <a href="/courses/search"
+                       class="rounded-2xl border px-4 py-3 hover:bg-slate-50 transition font-medium">
+                        Course Search
+                    </a>
+                    <a href="/timetable"
+                       class="rounded-2xl border px-4 py-3 hover:bg-slate-50 transition font-medium">
+                        Timetable
+                    </a>
+                    <a href="/mock-qldt"
+                       class="rounded-2xl border px-4 py-3 hover:bg-slate-50 transition font-medium">
+                        Mock QLĐT Panel
+                    </a>
+                    <a href="/debug/queue"
+                       class="rounded-2xl border px-4 py-3 hover:bg-slate-50 transition font-medium">
+                        Debug Global Queue
+                    </a>
+                </div>
+            </section>
         </div>
-
-        <!-- Sidebar -->
-        <div class="lg:col-span-4 space-y-6">
-            <!-- Quick Actions -->
-            <div class="bg-white rounded-3xl shadow-sm p-8">
-                <h3 class="text-xl font-bold mb-6">Quick Actions</h3>
-                <a href="/courses/search"
-                   class="flex items-center justify-between bg-gray-50 hover:bg-gray-100 p-4 rounded-2xl mb-3 transition">
-                    <span>Search Courses</span>
-                    <span class="material-symbols-outlined">search</span>
-                </a>
-                <div class="bg-white rounded-3xl shadow-sm p-8">
-                    <div class="flex justify-between items-center mb-6">
-                        <div>
-                            <h2 class="text-xl font-bold">Config Rules</h2>
-                            <p class="text-sm text-gray-500">Thiết lập luật cho auto-registration</p>
-                        </div>
-                        <button type="button"
-                                onclick="openRulesModal()"
-                                class="px-5 py-2.5 bg-[#1A237E] text-white rounded-2xl font-medium hover:bg-[#0d145c] transition">
-                            Configure
-                        </button>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div class="bg-gray-50 rounded-2xl p-4">
-                            <p class="text-gray-500 mb-1">Auto Registration</p>
-                            <p id="rules-summary-enabled" class="font-semibold text-gray-800">Enabled</p>
-                        </div>
-                        <div class="bg-gray-50 rounded-2xl p-4">
-                            <p class="text-gray-500 mb-1">Retry Interval</p>
-                            <p id="rules-summary-interval" class="font-semibold text-gray-800">1000 ms</p>
-                        </div>
-                        <div class="bg-gray-50 rounded-2xl p-4">
-                            <p class="text-gray-500 mb-1">Max Retries</p>
-                            <p id="rules-summary-retries" class="font-semibold text-gray-800">50</p>
-                        </div>
-                        <div class="bg-gray-50 rounded-2xl p-4">
-                            <p class="text-gray-500 mb-1">Conflict Policy</p>
-                            <p id="rules-summary-conflict" class="font-semibold text-gray-800">Avoid conflicts</p>
-                        </div>
-                    </div>
-                </div>
-                <a href="#" class="flex items-center justify-between bg-gray-50 hover:bg-gray-100 p-4 rounded-2xl transition">
-                    <span>View History</span>
-                    <span class="material-symbols-outlined">history</span>
-                </a>
-            </div>
-        </div>
-
     </div>
 </main>
-<!-- Config Rules Modal -->
+
+<!-- CONFIG RULES MODAL -->
 <div id="rulesModal"
      class="fixed inset-0 bg-black/45 hidden items-center justify-center z-[999] p-4"
      onclick="handleBackdropClose(event)">
@@ -226,7 +304,7 @@
                         <input type="datetime-local"
                                id="ruleStartTime"
                                class="w-full rounded-xl border-gray-300">
-                        <p class="text-xs text-gray-500 mt-2">Thời điểm bắt đầu gửi request đăng ký</p>
+                        <p class="text-xs text-gray-500 mt-2">Đến đúng thời điểm này engine mới tự bắt đầu chạy</p>
                     </label>
                 </div>
 
@@ -235,11 +313,10 @@
                         <p class="font-semibold text-gray-900 mb-2">Retry Interval (ms)</p>
                         <input type="number"
                                id="ruleRetryInterval"
-                               value="1000"
+                               value="300"
                                min="100"
                                step="100"
                                class="w-full rounded-xl border-gray-300">
-                        <p class="text-xs text-gray-500 mt-2">Khoảng nghỉ giữa các lần thử đăng ký</p>
                     </label>
                 </div>
 
@@ -248,10 +325,9 @@
                         <p class="font-semibold text-gray-900 mb-2">Max Retries per Course</p>
                         <input type="number"
                                id="ruleMaxRetries"
-                               value="50"
+                               value="3"
                                min="1"
                                class="w-full rounded-xl border-gray-300">
-                        <p class="text-xs text-gray-500 mt-2">Số lần thử tối đa cho mỗi môn</p>
                     </label>
                 </div>
 
@@ -259,7 +335,7 @@
                     <label class="flex items-start justify-between gap-4 cursor-pointer">
                         <div>
                             <p class="font-semibold text-gray-900">Prioritize by Queue Order</p>
-                            <p class="text-sm text-gray-500 mt-1">Ưu tiên đúng theo thứ tự hàng đợi</p>
+                            <p class="text-sm text-gray-500 mt-1">Ưu tiên theo local priority trong queue</p>
                         </div>
                         <input type="checkbox" id="ruleQueuePriority" class="w-5 h-5 mt-1" checked>
                     </label>
@@ -269,9 +345,9 @@
                     <label class="flex items-start justify-between gap-4 cursor-pointer">
                         <div>
                             <p class="font-semibold text-gray-900">Stop When Registered</p>
-                            <p class="text-sm text-gray-500 mt-1">Đăng ký thành công thì dừng môn đó</p>
+                            <p class="text-sm text-gray-500 mt-1">Thành công 1 môn thì dừng các môn còn lại của user đó</p>
                         </div>
-                        <input type="checkbox" id="ruleStopWhenSuccess" class="w-5 h-5 mt-1" checked>
+                        <input type="checkbox" id="ruleStopWhenSuccess" class="w-5 h-5 mt-1">
                     </label>
                 </div>
 
@@ -279,7 +355,7 @@
                     <label class="flex items-start justify-between gap-4 cursor-pointer">
                         <div>
                             <p class="font-semibold text-gray-900">Avoid Schedule Conflicts</p>
-                            <p class="text-sm text-gray-500 mt-1">Không đăng ký nếu bị trùng lịch</p>
+                            <p class="text-sm text-gray-500 mt-1">Bỏ qua các môn bị trùng lịch với môn đã chọn</p>
                         </div>
                         <input type="checkbox" id="ruleAvoidConflicts" class="w-5 h-5 mt-1" checked>
                     </label>
@@ -289,7 +365,7 @@
                     <label class="flex items-start justify-between gap-4 cursor-pointer">
                         <div>
                             <p class="font-semibold text-gray-900">Only Register When Slots Available</p>
-                            <p class="text-sm text-gray-500 mt-1">Chỉ đăng ký khi còn chỗ trống</p>
+                            <p class="text-sm text-gray-500 mt-1">Chỉ đăng ký khi số chỗ trống đạt điều kiện</p>
                         </div>
                         <input type="checkbox" id="ruleOnlyWhenOpen" class="w-5 h-5 mt-1" checked>
                     </label>
@@ -303,7 +379,6 @@
                                value="1"
                                min="1"
                                class="w-full rounded-xl border-gray-300">
-                        <p class="text-xs text-gray-500 mt-2">Chỉ đăng ký nếu số chỗ còn trống đạt ngưỡng này</p>
                     </label>
                 </div>
 
@@ -313,9 +388,8 @@
                         <input type="number"
                                id="ruleTargetCredits"
                                value="18"
-                               min="1"
+                               min="0"
                                class="w-full rounded-xl border-gray-300">
-                        <p class="text-xs text-gray-500 mt-2">Dừng khi tổng số tín chỉ đạt mục tiêu</p>
                     </label>
                 </div>
 
@@ -328,7 +402,6 @@
                             <option value="AFTERNOON">Afternoon</option>
                             <option value="EVENING">Evening</option>
                         </select>
-                        <p class="text-xs text-gray-500 mt-2">Ưu tiên khung giờ học mong muốn</p>
                     </label>
                 </div>
 
@@ -336,7 +409,7 @@
                     <label class="flex items-start justify-between gap-4 cursor-pointer">
                         <div>
                             <p class="font-semibold text-gray-900">Enable Notifications</p>
-                            <p class="text-sm text-gray-500 mt-1">Thông báo khi đăng ký thành công hoặc thất bại</p>
+                            <p class="text-sm text-gray-500 mt-1">Ghi notification mock khi success/fail</p>
                         </div>
                         <input type="checkbox" id="ruleNotifications" class="w-5 h-5 mt-1" checked>
                     </label>
@@ -363,77 +436,131 @@
         </div>
     </div>
 </div>
-<script>
-    async function removeCourseAjax(courseId) {
-        const formData = new URLSearchParams();
-        formData.append('courseId', courseId);
 
-        const response = await fetch('/queue/remove-ajax', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-            },
-            body: formData.toString()
+<script th:inline="javascript">
+    const initialRecords = /*[[${myRecords}]]*/ [];
+
+    function updateQueuedCredits() {
+        const creditCells = document.querySelectorAll('.course-credit');
+        let total = 0;
+        creditCells.forEach(cell => {
+            const value = Number((cell.textContent || '0').trim());
+            if (!Number.isNaN(value)) total += value;
         });
+        document.getElementById('queuedCreditsText').textContent = total;
+    }
 
-        const data = await response.json();
+    async function removeCourseFromQueue(courseId) {
+        try {
+            const body = new URLSearchParams();
+            body.append('courseId', courseId);
 
-        if (!data.success) {
-            console.log(data.message || 'Remove failed');
-            return;
-        }
-
-        const recordEl = document.querySelector(`.queue-record[data-course-id="${courseId}"]`);
-        if (recordEl) {
-            recordEl.remove();
-        }
-
-        // cập nhật lại priority trên giao diện theo dữ liệu mới
-        const queueRecords = data.myRecords || [];
-        queueRecords
-            .filter(r => r.status && r.status === 'PENDING')
-            .forEach(record => {
-                const el = document.querySelector(`.queue-record[data-course-id="${record.course?.id}"] .queue-priority`);
-                if (el) {
-                    el.textContent = record.priority ?? '';
-                }
+            const response = await fetch('/queue/remove-ajax', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                },
+                body: body.toString()
             });
 
-        const remainingItems = document.querySelectorAll('.queue-record').length;
-        const emptyText = document.getElementById('pending-empty-text');
-        const queueList = document.getElementById('queue-list');
+            const data = await response.json();
 
-        if (remainingItems === 0) {
-            if (emptyText) {
-                emptyText.classList.remove('hidden');
+            if (data && data.success) {
+                window.location.reload();
+            } else {
+                alert(data?.message || 'Remove failed');
             }
-            if (queueList) {
-                queueList.classList.add('hidden');
-            }
-        } else {
-            if (emptyText) {
-                emptyText.classList.add('hidden');
-            }
-            if (queueList) {
-                queueList.classList.remove('hidden');
-            }
+        } catch (e) {
+            console.error(e);
+            alert('Remove failed');
         }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('.dashboard-remove-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                removeCourseAjax(btn.dataset.courseId);
+    async function startAutoRegistration() {
+        try {
+            const response = await fetch('/auto-registration/start', {
+                method: 'POST'
             });
-        });
-    });
+            const data = await response.json();
+            console.log('START AUTO:', data);
+            await refreshAutoEngineStatus();
+        } catch (error) {
+            console.error('START AUTO ERROR:', error);
+        }
+    }
+
+    async function stopAutoRegistration() {
+        try {
+            const response = await fetch('/auto-registration/stop', {
+                method: 'POST'
+            });
+            const data = await response.json();
+            console.log('STOP AUTO:', data);
+            await refreshAutoEngineStatus();
+        } catch (error) {
+            console.error('STOP AUTO ERROR:', error);
+        }
+    }
+
+    async function resetMockState() {
+        try {
+            const response = await fetch('/mock-state/reset', {
+                method: 'POST'
+            });
+            const data = await response.json();
+            console.log('RESET MOCK:', data);
+            alert(data.message || 'Mock state reset');
+        } catch (error) {
+            console.error('RESET MOCK ERROR:', error);
+            alert('Reset failed');
+        }
+    }
+
+    async function refreshAutoEngineStatus() {
+        try {
+            const response = await fetch('/auto-registration/status');
+            const data = await response.json();
+
+            document.getElementById('engineStatusText').textContent = data.status || 'UNKNOWN';
+            document.getElementById('engineMessageText').textContent = data.lastMessage || '-';
+            document.getElementById('engineLastRunText').textContent = data.lastRunTime || '-';
+
+            const badge = document.getElementById('engineStatusBadge');
+            badge.textContent = data.status || 'UNKNOWN';
+            badge.className = 'text-xs font-semibold px-3 py-1 rounded-full ' +
+                (
+                    data.status === 'RUNNING' ? 'bg-green-100 text-green-700' :
+                    data.status === 'WAITING' ? 'bg-amber-100 text-amber-700' :
+                    data.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' :
+                    data.status === 'ERROR' ? 'bg-red-100 text-red-700' :
+                    'bg-gray-200 text-gray-700'
+                );
+
+            const startBtn = document.getElementById('startAutoBtn');
+            const stopBtn = document.getElementById('stopAutoBtn');
+
+            if (data.running) {
+                startBtn.disabled = true;
+                startBtn.classList.add('opacity-60', 'cursor-not-allowed');
+                stopBtn.disabled = false;
+                stopBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+            } else {
+                startBtn.disabled = false;
+                startBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+                stopBtn.disabled = false;
+            }
+        } catch (error) {
+            console.error('STATUS ERROR:', error);
+        }
+    }
+
     const defaultRules = {
         enabled: true,
         startTime: "",
-        retryInterval: 1000,
-        maxRetries: 50,
+        retryInterval: 300,
+        maxRetries: 3,
         queuePriority: true,
-        stopWhenSuccess: true,
+        stopWhenSuccess: false,
         avoidConflicts: true,
         onlyWhenOpen: true,
         minSlots: 1,
@@ -443,56 +570,43 @@
     };
 
     async function openRulesModal() {
-    const modal = document.getElementById('rulesModal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    document.body.classList.add('overflow-hidden');
-    await loadRulesToForm();
-}
-
-function closeRulesModal() {
-    const modal = document.getElementById('rulesModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-    document.body.classList.remove('overflow-hidden');
-}
-
-function handleBackdropClose(event) {
-    if (event.target.id === 'rulesModal') {
-        closeRulesModal();
+        const modal = document.getElementById('rulesModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.classList.add('overflow-hidden');
+        await loadRulesToForm();
     }
-}
-    function getStoredRules() {
-        const saved = localStorage.getItem('autoRegistrationRules');
-        if (!saved) return { ...defaultRules };
 
-        try {
-            return { ...defaultRules, ...JSON.parse(saved) };
-        } catch (e) {
-            return { ...defaultRules };
+    function closeRulesModal() {
+        const modal = document.getElementById('rulesModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.classList.remove('overflow-hidden');
+    }
+
+    function handleBackdropClose(event) {
+        if (event.target.id === 'rulesModal') {
+            closeRulesModal();
         }
     }
-    document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-        closeRulesModal();
-    }
-    });
+
     async function loadRulesToForm() {
-    const res = await fetch('/rules/get');
-    const rules = await res.json();
-    document.getElementById('ruleEnabled').checked = rules.enabled;
-    document.getElementById('ruleStartTime').value = rules.startTime || '';
-    document.getElementById('ruleRetryInterval').value = rules.retryInterval;
-    document.getElementById('ruleMaxRetries').value = rules.maxRetries;
-    document.getElementById('ruleQueuePriority').checked = rules.queuePriority;
-    document.getElementById('ruleStopWhenSuccess').checked = rules.stopWhenSuccess;
-    document.getElementById('ruleAvoidConflicts').checked = rules.avoidConflicts;
-    document.getElementById('ruleOnlyWhenOpen').checked = rules.onlyWhenOpen;
-    document.getElementById('ruleMinSlots').value = rules.minSlots;
-    document.getElementById('ruleTargetCredits').value = rules.targetCredits;
-    document.getElementById('rulePreferredSession').value = rules.preferredSession;
-    document.getElementById('ruleNotifications').checked = rules.notifications;
-}
+        const res = await fetch('/rules/get');
+        const rules = await res.json();
+
+        document.getElementById('ruleEnabled').checked = rules.enabled;
+        document.getElementById('ruleStartTime').value = rules.startTime || '';
+        document.getElementById('ruleRetryInterval').value = rules.retryInterval;
+        document.getElementById('ruleMaxRetries').value = rules.maxRetries;
+        document.getElementById('ruleQueuePriority').checked = rules.queuePriority;
+        document.getElementById('ruleStopWhenSuccess').checked = rules.stopWhenSuccess;
+        document.getElementById('ruleAvoidConflicts').checked = rules.avoidConflicts;
+        document.getElementById('ruleOnlyWhenOpen').checked = rules.onlyWhenOpen;
+        document.getElementById('ruleMinSlots').value = rules.minSlots;
+        document.getElementById('ruleTargetCredits').value = rules.targetCredits;
+        document.getElementById('rulePreferredSession').value = rules.preferredSession;
+        document.getElementById('ruleNotifications').checked = rules.notifications;
+    }
 
     function resetRules() {
         document.getElementById('ruleEnabled').checked = defaultRules.enabled;
@@ -510,50 +624,67 @@ function handleBackdropClose(event) {
     }
 
     async function saveRules() {
-    const rules = {
-        enabled: document.getElementById('ruleEnabled').checked,
-        startTime: document.getElementById('ruleStartTime').value,
-        retryInterval: Number(document.getElementById('ruleRetryInterval').value),
-        maxRetries: Number(document.getElementById('ruleMaxRetries').value),
-        queuePriority: document.getElementById('ruleQueuePriority').checked,
-        stopWhenSuccess: document.getElementById('ruleStopWhenSuccess').checked,
-        avoidConflicts: document.getElementById('ruleAvoidConflicts').checked,
-        onlyWhenOpen: document.getElementById('ruleOnlyWhenOpen').checked,
-        minSlots: Number(document.getElementById('ruleMinSlots').value),
-        targetCredits: Number(document.getElementById('ruleTargetCredits').value),
-        preferredSession: document.getElementById('rulePreferredSession').value,
-        notifications: document.getElementById('ruleNotifications').checked
-    };
+        const rules = {
+            enabled: document.getElementById('ruleEnabled').checked,
+            startTime: document.getElementById('ruleStartTime').value,
+            retryInterval: Number(document.getElementById('ruleRetryInterval').value || 300),
+            maxRetries: Number(document.getElementById('ruleMaxRetries').value || 3),
+            queuePriority: document.getElementById('ruleQueuePriority').checked,
+            stopWhenSuccess: document.getElementById('ruleStopWhenSuccess').checked,
+            avoidConflicts: document.getElementById('ruleAvoidConflicts').checked,
+            onlyWhenOpen: document.getElementById('ruleOnlyWhenOpen').checked,
+            minSlots: Number(document.getElementById('ruleMinSlots').value || 1),
+            targetCredits: Number(document.getElementById('ruleTargetCredits').value || 18),
+            preferredSession: document.getElementById('rulePreferredSession').value,
+            notifications: document.getElementById('ruleNotifications').checked
+        };
 
-    await fetch('/rules/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(rules)
-    });
+        await fetch('/rules/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(rules)
+        });
 
-    updateRulesSummary(rules);
-    closeRulesModal();
-}
+        await updateRulesSummary();
+        closeRulesModal();
+    }
 
     async function updateRulesSummary() {
-    const res = await fetch('/rules/get');
-    const rules = await res.json();
+        const res = await fetch('/rules/get');
+        const rules = await res.json();
 
-    document.getElementById('rules-summary-enabled').textContent =
-        rules.enabled ? 'Enabled' : 'Disabled';
+        document.getElementById('rules-summary-enabled').textContent =
+            rules.enabled ? 'Enabled' : 'Disabled';
 
-    document.getElementById('rules-summary-interval').textContent =
-        rules.retryInterval + " ms";
+        document.getElementById('rules-summary-interval').textContent =
+            rules.retryInterval + ' ms';
 
-    document.getElementById('rules-summary-retries').textContent =
-        rules.maxRetries;
+        document.getElementById('rules-summary-retries').textContent =
+            rules.maxRetries;
 
-    document.getElementById('rules-summary-conflict').textContent =
-        rules.avoidConflicts ? 'Avoid conflicts' : 'Ignore conflicts';
-}
-    document.addEventListener('DOMContentLoaded', () => {
-        updateRulesSummary();
+        document.getElementById('rules-summary-conflict').textContent =
+            rules.avoidConflicts ? 'Avoid conflicts' : 'Ignore conflicts';
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeRulesModal();
+        }
     });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        updateQueuedCredits();
+        updateRulesSummary();
+        refreshAutoEngineStatus();
+
+        document.querySelectorAll('.remove-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                removeCourseFromQueue(btn.dataset.courseId);
+            });
+        });
+    });
+
+    setInterval(refreshAutoEngineStatus, 1000);
 </script>
 
 </body>
