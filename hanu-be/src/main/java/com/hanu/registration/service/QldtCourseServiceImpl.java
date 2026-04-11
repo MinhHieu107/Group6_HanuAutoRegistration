@@ -113,6 +113,7 @@ public class QldtCourseServiceImpl implements QldtCourseService {
         String courseName = getString(item, "ten_mon");
         String courseNameEn = getString(item, "ten_mon_eg");
         String subGroup = getString(item, "nhom_to");
+        String idToHoc = getString(item, "id_to_hoc");
 
         if (!matchesMajor(courseCode, majorCode, normalCourseKeys)) {
             return null;
@@ -130,7 +131,7 @@ public class QldtCourseServiceImpl implements QldtCourseService {
         course.setEnrolled(extractInt(item, "sl_dk"));
         course.setCapacity(extractInt(item, "sl_cp"));
         course.setDepartment(majorCode != null ? majorCode : "Unknown");
-
+        course.setIdToHoc(getString(item, "id_to_hoc"));
         return course;
     }
 

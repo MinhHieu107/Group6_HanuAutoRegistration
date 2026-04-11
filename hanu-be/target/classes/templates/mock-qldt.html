@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Mock QLĐT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+<div class="max-w-6xl mx-auto bg-white rounded-3xl shadow-lg p-8">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-[#1A237E]">Mock QLĐT Registration Panel</h1>
+            <p class="text-sm text-gray-500 mt-1">
+                Mô phỏng danh sách course thật từ Course Search và tự tick checkbox sau khi Run Auto
+            </p>
+        </div>
+        <a href="/dashboard"
+           class="px-4 py-2 rounded-2xl bg-[#1A237E] text-white font-medium hover:bg-[#0d145c] transition">
+            Back to Dashboard
+        </a>
+    </div>
+
+    <div class="mb-6 bg-gray-50 border border-gray-200 rounded-2xl p-4">
+        <p class="font-semibold text-gray-700 mb-2">Selected From Backend</p>
+        <pre id="selected-json" class="text-xs text-gray-600 whitespace-pre-wrap">[]</pre>
+    </div>
+
+    <div class="space-y-4">
+        <div th:if="${#lists.isEmpty(courses)}"
+             class="border rounded-2xl p-5 bg-gray-50 text-gray-500">
+            Chưa có course nào trong session currentSearchCourses.
+            Hãy vào Course Search trước để load danh sách môn.
+        </div>
+
+        <div th:each="course : ${courses}"
+             class="mock-course-row border rounded-2xl p-4 flex items-center justify-between transition"
+             th:attr="data-id-to-hoc=${course.idToHoc}">
+            <div class="pr-4">
+                <p class="font-bold" th:text="${course.id}"></p>
+
+                <p class="text-sm text-gray-700"
+                   th:text="${course.courseNameEn != null && !course.courseNameEn.isEmpty() ? course.courseNameEn : course.groupName}">
+                </p>
+
+                <p class="text-xs text-gray-500 mt-1">
+                    <span th:text="'Credits: ' + ${course.credits}"></span>
+                    <span class="mx-2">•</span>
+                    <span th:text="'Group: ' + ${course.subGroup}"></span>
+                </p>
+
+                <p class="text-xs text-gray-400 mt-1"
+                   th:utext="${course.scheduleTime}">
+                </p>
+            </div>
+
+            <input type="checkbox"
+                   class="mock-course-checkbox w-5 h-5 shrink-0"
+                   th:attr="data-id-to-hoc=${course.idToHoc}">
+        </div>
+    </div>
+
+    <div class="mt-8 flex items-center gap-4">
+        <button id="mock-register-btn"
+                class="px-5 py-2.5 rounded-2xl bg-[#1A237E] text-white font-medium">
+            Register Selected
+        </button>
+        <span id="mock-result" class="text-sm text-gray-600">Ready</span>
+    </div>
+</div>
+
+<script>
+
+    async function loadSelectedCourses() {
+        try {
+            const res = await fetch('/mock-qldt/selected');
+            const selectedIdToHocList = await res.json();
+
+            document.getElementById('selected-json').textContent =
+                JSON.stringify(selectedIdToHocList, null, 2);
+
+            const normalized = selectedIdToHocList.map(v => String(v).trim());
+
+            document.querySelectorAll('.mock-course-checkbox').forEach(checkbox => {
+                const idToHoc = String(checkbox.dataset.idToHoc || '').trim();
+                const row = checkbox.closest('.mock-course-row');
+
+                if (normalized.includes(idToHoc)) {
+                    checkbox.checked = true;
+                    row.classList.add('bg-green-50', 'border-green-400');
+
+                    checkbox.animate([
+                        { transform: 'scale(1)' },
+                        { transform: 'scale(1.18)' },
+                        { transform: 'scale(1)' }
+                    ], { duration: 260 });
+                } else {
+                    checkbox.checked = false;
+                    row.classList.remove('bg-green-50', 'border-green-400');
+                }
+            });
+
+        } catch (e) {
+            console.error("Load selected error:", e);
+            document.getElementById('selected-json').textContent = 'ERROR: ' + e;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadSelectedCourses();
+    });
+
+
+
+    document.getElementById('mock-register-btn').addEventListener('click', () => {
+        const selected = Array.from(document.querySelectorAll('.mock-course-checkbox:checked'))
+            .map(el => el.dataset.courseCode);
+
+        const result = document.getElementById('mock-result');
+
+        if (selected.length === 0) {
+            result.textContent = 'No course selected';
+            return;
+        }
+
+        result.textContent = 'Selected: ' + selected.join(', ');
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadSelectedCourses();
+    });
+</script>
+</body>
+</html>

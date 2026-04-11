@@ -45,8 +45,8 @@ public class CourseController {
         String studentMajorCode = null;
 
         if (accessToken != null && !accessToken.isBlank()) {
-            studentMajorCode = "VIP";
-            //studentMajorCode = "ITA";
+            //studentMajorCode = "VIP";
+            studentMajorCode = "VNS";
             //studentMajorCode = qldtStudentService.getStudentMajorCode(accessToken, qldtSession);
             courses = qldtCourseService.fetchAllCourses(accessToken, qldtSession, studentMajorCode);
         }

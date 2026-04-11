@@ -4,7 +4,10 @@ import com.hanu.registration.model.Course;
 import com.hanu.registration.model.QueueActionResponse;
 import com.hanu.registration.model.RegistrationRecord;
 import com.hanu.registration.model.RegistrationStatus;
+import com.hanu.registration.service.GlobalQueueStore;
+import com.hanu.registration.service.QueueRecordStateService;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -12,11 +15,21 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-@RestController
+@Controller
 @RequestMapping("/queue")
 public class QueueController {
 
+    private final GlobalQueueStore globalQueueStore;
+    private final QueueRecordStateService queueRecordStateService;
+
+    public QueueController(GlobalQueueStore globalQueueStore,
+                           QueueRecordStateService queueRecordStateService) {
+        this.globalQueueStore = globalQueueStore;
+        this.queueRecordStateService = queueRecordStateService;
+    }
+
     @PostMapping("/add-ajax")
+    @ResponseBody
     public QueueActionResponse addCourseAjax(@RequestParam("courseId") Long courseId,
                                              HttpSession session) {
 
@@ -58,16 +71,23 @@ public class QueueController {
         record.setUpdatedAt(LocalDateTime.now());
 
         myRecords.add(record);
-        session.setAttribute("myRecords", myRecords);
+        myRecords = sortRecords(myRecords);
 
-        return new QueueActionResponse(true, "Đã thêm môn vào hàng đợi.", true, sortRecords(myRecords));
+        session.setAttribute("myRecords", myRecords);
+        queueRecordStateService.registerStudentRecords(studentId, myRecords);
+
+        globalQueueStore.registerAdd(studentId, record);
+
+        return new QueueActionResponse(true, "Đã thêm môn vào hàng đợi.", true, myRecords);
     }
 
     @PostMapping("/remove-ajax")
+    @ResponseBody
     public QueueActionResponse removeCourseAjax(@RequestParam("courseId") Long courseId,
                                                 HttpSession session) {
 
         List<RegistrationRecord> myRecords = getSessionRecords(session);
+        String studentId = (String) session.getAttribute("studentId");
 
         boolean removed = myRecords.removeIf(r ->
                 r.getCourse() != null
@@ -75,7 +95,6 @@ public class QueueController {
                         && r.getCourse().getId().equals(courseId)
         );
 
-        // đánh lại priority
         myRecords = sortRecords(myRecords);
         for (int i = 0; i < myRecords.size(); i++) {
             myRecords.get(i).setPriority(i + 1);
@@ -83,6 +102,11 @@ public class QueueController {
         }
 
         session.setAttribute("myRecords", myRecords);
+        queueRecordStateService.registerStudentRecords(studentId, myRecords);
+
+        if (removed) {
+            globalQueueStore.markRemoved(studentId, courseId);
+        }
 
         if (!removed) {
             return new QueueActionResponse(false, "Không tìm thấy môn trong hàng đợi.", false, myRecords);

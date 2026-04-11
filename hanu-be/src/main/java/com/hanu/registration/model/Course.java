@@ -7,7 +7,7 @@ public class Course {
     private String groupName;
     private String subGroup;
     private Integer credits;
-
+    private String idToHoc;
     private String lecturer;
     private String scheduleTime;
 
@@ -22,7 +22,12 @@ public class Course {
     public boolean hasSlots() {
         return enrolled < capacity;
     }
-
+    public String getIdToHoc() {
+        return idToHoc;
+    }
+    public void setIdToHoc(String idToHoc) {
+        this.idToHoc = idToHoc;
+    }
     public Long getId() {
         return id;
     }
