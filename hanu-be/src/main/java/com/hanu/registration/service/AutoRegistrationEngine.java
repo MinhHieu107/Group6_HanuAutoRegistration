@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -33,7 +34,9 @@ public class AutoRegistrationEngine {
         }
 
         RunLogEntry runLog = runLogStore.createRun(studentId);
-        List<RunCourseResult> aggregatedResults = new ArrayList<>();
+
+        // Key = courseId, value = latest/final result for that course
+        Map<Long, RunCourseResult> aggregatedResults = new LinkedHashMap<>();
 
         running.set(true);
         status = "WAITING";
@@ -53,17 +56,33 @@ public class AutoRegistrationEngine {
 
                     if (cycleResults != null) {
                         for (Map<String, Object> item : cycleResults) {
+                            String statusCode = (String) item.get("statusCode");
+
+                            // WAIT_START_TIME chỉ là trạng thái chờ, không phải kết quả cần lưu vào history
+                            if ("WAIT_START_TIME".equals(statusCode)) {
+                                continue;
+                            }
+
                             RunCourseResult r = new RunCourseResult();
                             r.setCourseCode((String) item.get("courseCode"));
+
                             Object courseIdObj = item.get("courseId");
+                            Long courseId = null;
                             if (courseIdObj instanceof Number n) {
-                                r.setCourseId(n.longValue());
+                                courseId = n.longValue();
+                                r.setCourseId(courseId);
                             }
-                            r.setStatusCode((String) item.get("statusCode"));
+
+                            r.setStatusCode(statusCode);
                             r.setMessage((String) item.get("message"));
+
                             Object successObj = item.get("success");
                             r.setSuccess(successObj instanceof Boolean b && b);
-                            aggregatedResults.add(r);
+
+                            // Chỉ lưu kết quả cuối cùng theo từng course
+                            if (courseId != null) {
+                                aggregatedResults.put(courseId, r);
+                            }
                         }
                     }
 
@@ -79,7 +98,7 @@ public class AutoRegistrationEngine {
                                 runLog.getRunNumber(),
                                 "COMPLETED",
                                 lastMessage,
-                                aggregatedResults
+                                new ArrayList<>(aggregatedResults.values())
                         );
                         running.set(false);
                         break;
@@ -104,7 +123,7 @@ public class AutoRegistrationEngine {
                             runLog.getRunNumber(),
                             "STOPPED",
                             lastMessage,
-                            aggregatedResults
+                            new ArrayList<>(aggregatedResults.values())
                     );
                 }
 
@@ -117,7 +136,7 @@ public class AutoRegistrationEngine {
                         runLog.getRunNumber(),
                         "STOPPED",
                         lastMessage,
-                        aggregatedResults
+                        new ArrayList<>(aggregatedResults.values())
                 );
                 running.set(false);
             } catch (Exception e) {
@@ -128,7 +147,7 @@ public class AutoRegistrationEngine {
                         runLog.getRunNumber(),
                         "ERROR",
                         lastMessage,
-                        aggregatedResults
+                        new ArrayList<>(aggregatedResults.values())
                 );
                 running.set(false);
             }
