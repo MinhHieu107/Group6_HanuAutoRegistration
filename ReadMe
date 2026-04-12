@@ -1,1 +1,3 @@
-Back up for SE2 project
+Khi tải về run App, mng nên xóa  folder runtime để chạy lại nhé.
+Các chức năng đã hoàn thiện tương đối đến 90% r. Đang implement API real, nhưng trước đó đã có Selenium mng test ở đấy, nếu k thấy xanh thì báo lại lỗi
+
