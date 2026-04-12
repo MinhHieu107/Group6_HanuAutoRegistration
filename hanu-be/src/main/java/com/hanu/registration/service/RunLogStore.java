@@ -46,8 +46,14 @@ public class RunLogStore {
                 int success = 0;
                 int failed = 0;
                 for (RunCourseResult r : log.getCourseResults()) {
-                    if (r.isSuccess()) success++;
-                    else failed++;
+                    if (r.isSuccess()) {
+                        success++;
+                    } else {
+                        String code = r.getStatusCode();
+                        if (!"WAIT_START_TIME".equals(code)) {
+                            failed++;
+                        }
+                    }
                 }
                 log.setSuccessCount(success);
                 log.setFailedCount(failed);
