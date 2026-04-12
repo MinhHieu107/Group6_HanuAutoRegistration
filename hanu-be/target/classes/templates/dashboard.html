@@ -6,12 +6,21 @@
     <title>HANU Automatic Registration - Dashboard</title>
 
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 
     <style>
         body { font-family: 'Inter', sans-serif; }
         h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+
+        .sortable-ghost {
+            opacity: 0.45;
+        }
+
+        .sortable-chosen {
+            background: #eff6ff !important;
+        }
     </style>
 </head>
 <body class="bg-[#f5f7fb] text-slate-900 min-h-screen">
@@ -126,6 +135,7 @@
                     <table class="w-full text-sm">
                         <thead>
                         <tr class="border-b text-slate-500">
+                            <th class="text-left py-4 pr-4 w-10"></th>
                             <th class="text-left py-4 pr-4">Priority</th>
                             <th class="text-left py-4 pr-4">Code</th>
                             <th class="text-left py-4 pr-4">Course Name</th>
@@ -139,7 +149,10 @@
                         <tr th:each="record : ${myRecords}"
                             class="border-b last:border-0 hover:bg-slate-50 transition"
                             th:attr="data-course-id=${record.course.id}">
-                            <td class="py-4 pr-4 font-semibold" th:text="${record.priority}">1</td>
+                            <td class="py-4 pr-4 text-slate-400 cursor-move drag-handle">
+                                <span class="material-symbols-outlined text-base">drag_indicator</span>
+                            </td>
+                            <td class="py-4 pr-4 font-semibold priority-cell" th:text="${record.priority}">1</td>
                             <td class="py-4 pr-4 font-semibold" th:text="${record.course.courseCode}">61FIT4GRP</td>
                             <td class="py-4 pr-4"
                                 th:text="${record.course.courseNameEn != null && !record.course.courseNameEn.isEmpty() ? record.course.courseNameEn : record.course.groupName}">
@@ -527,6 +540,66 @@
         }
     }
 
+    async function saveQueueOrder() {
+        const rows = document.querySelectorAll('#queueTableBody tr');
+        const payload = [];
+
+        rows.forEach((row, index) => {
+            const courseId = row.getAttribute('data-course-id');
+            const priorityCell = row.querySelector('.priority-cell');
+
+            if (priorityCell) {
+                priorityCell.textContent = index + 1;
+            }
+
+            payload.push({
+                courseId: Number(courseId),
+                priority: index + 1
+            });
+        });
+
+        try {
+            const response = await fetch('/queue/reorder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showNotice(data.message || 'Queue order updated', 'success');
+                await refreshQueueTable();
+            } else {
+                showNotice(data.message || 'Failed to update queue order', 'error');
+            }
+        } catch (error) {
+            console.error('REORDER ERROR:', error);
+            showNotice('Failed to update queue order', 'error');
+        }
+    }
+
+    function initQueueSortable() {
+        const tbody = document.getElementById('queueTableBody');
+        if (!tbody) return;
+
+        if (tbody._sortableInstance) {
+            tbody._sortableInstance.destroy();
+        }
+
+        tbody._sortableInstance = new Sortable(tbody, {
+            animation: 150,
+            handle: '.drag-handle',
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onEnd: async function () {
+                await saveQueueOrder();
+            }
+        });
+    }
+
     async function startAutoRegistration() {
         try {
             const response = await fetch('/auto-registration/start', {
@@ -628,7 +701,10 @@
 
                 return `
                     <tr class="border-b last:border-0 hover:bg-slate-50 transition" data-course-id="${course.id || ''}">
-                        <td class="py-4 pr-4 font-semibold">${record.priority ?? ''}</td>
+                        <td class="py-4 pr-4 text-slate-400 cursor-move drag-handle">
+                            <span class="material-symbols-outlined text-base">drag_indicator</span>
+                        </td>
+                        <td class="py-4 pr-4 font-semibold priority-cell">${record.priority ?? ''}</td>
                         <td class="py-4 pr-4 font-semibold">${escapeHtml(course.courseCode ?? '')}</td>
                         <td class="py-4 pr-4">${escapeHtml((course.courseNameEn && course.courseNameEn.length > 0) ? course.courseNameEn : (course.groupName ?? ''))}</td>
                         <td class="py-4 pr-4 course-credit">${credits}</td>
@@ -657,6 +733,7 @@
                 });
             });
 
+            initQueueSortable();
         } catch (error) {
             console.error('QUEUE REFRESH ERROR:', error);
         }
@@ -863,7 +940,7 @@
         refreshAutoEngineStatus();
         refreshRunLogs();
         refreshQueueTable();
-
+        initQueueSortable();
         document.querySelectorAll('.remove-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 removeCourseFromQueue(btn.dataset.courseId);

@@ -6,7 +6,12 @@ import com.hanu.registration.model.RegistrationRecord;
 import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
-import java.io.*;
+import java.io.EOFException;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -156,6 +161,12 @@ public class FileBasedGlobalQueueStore implements GlobalQueueStore {
                             Comparator.nullsLast(Long::compareTo)
                     ))
                     .collect(Collectors.toList());
+        }
+    }
+
+    public void overwriteAllEntries(List<GlobalQueueEntry> entries) {
+        synchronized (lock) {
+            saveEntries(entries);
         }
     }
 
