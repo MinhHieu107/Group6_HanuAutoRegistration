@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HANU Automatic Registration - Dashboard</title>
+
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
     <style>
         body { font-family: 'Inter', sans-serif; }
         h1, h2, h3 { font-family: 'Manrope', sans-serif; }
@@ -31,11 +33,13 @@
         <button class="p-2 text-slate-600 hover:bg-[#f3f3f3] rounded-full transition-all">
             <span class="material-symbols-outlined">notifications</span>
         </button>
+
         <div class="flex items-center gap-3 pl-2 border-l">
             <div class="text-right hidden sm:block">
                 <p class="text-sm font-bold" th:text="${fullName} ?: 'Student'"></p>
                 <p class="text-xs text-slate-500" th:text="${studentId} ?: 'Guest'"></p>
             </div>
+
             <a href="/logout"
                class="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center hover:bg-red-100">
                 <span class="material-symbols-outlined text-red-600">logout</span>
@@ -52,7 +56,10 @@
         </p>
     </div>
 
-    <!-- SUMMARY -->
+    <div id="uiNotice"
+         class="hidden mb-6 rounded-2xl px-4 py-3 text-sm font-medium border">
+    </div>
+
     <section class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
         <div class="bg-white rounded-3xl shadow-sm p-6">
             <p class="text-sm text-slate-500 mb-2">Pending Requests</p>
@@ -71,10 +78,8 @@
     </section>
 
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        <!-- LEFT -->
         <div class="xl:col-span-8 space-y-6">
 
-            <!-- QUEUE -->
             <section class="bg-white rounded-3xl shadow-sm p-6">
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
                     <div>
@@ -109,12 +114,15 @@
                     </div>
                 </div>
 
-                <div th:if="${myRecords == null or #lists.isEmpty(myRecords)}"
+                <div id="queueEmptyState"
+                     th:if="${myRecords == null or #lists.isEmpty(myRecords)}"
                      class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-10 text-center text-slate-500">
                     No course in queue yet.
                 </div>
 
-                <div th:if="${myRecords != null and !#lists.isEmpty(myRecords)}" class="overflow-x-auto">
+                <div id="queueTableWrapper"
+                     th:if="${myRecords != null and !#lists.isEmpty(myRecords)}"
+                     class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
                         <tr class="border-b text-slate-500">
@@ -127,7 +135,7 @@
                             <th class="text-right py-4">Action</th>
                         </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="queueTableBody">
                         <tr th:each="record : ${myRecords}"
                             class="border-b last:border-0 hover:bg-slate-50 transition"
                             th:attr="data-course-id=${record.course.id}">
@@ -144,7 +152,13 @@
                                 Schedule
                             </td>
                             <td class="py-4 pr-4">
-                                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"
+                                <span th:if="${record.status != null}"
+                                      class="px-3 py-1 rounded-full text-xs font-semibold"
+                                      th:classappend="${
+                                          record.status.name() == 'REGISTERED' ? ' bg-emerald-100 text-emerald-700' :
+                                          (record.status.name() == 'FAILED' ? ' bg-red-100 text-red-700' :
+                                          ' bg-amber-100 text-amber-700')
+                                      }"
                                       th:text="${record.status}">
                                     PENDING
                                 </span>
@@ -162,7 +176,6 @@
                 </div>
             </section>
 
-            <!-- ENGINE STATUS -->
             <section id="autoEngineStatusBox"
                      class="bg-white rounded-3xl shadow-sm p-6">
                 <div class="flex items-center justify-between mb-4">
@@ -194,11 +207,22 @@
                     </div>
                 </div>
             </section>
+
+            <section class="bg-white rounded-3xl shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold">Run Logs</h2>
+                        <p class="text-sm text-gray-500">History of auto-registration runs</p>
+                    </div>
+                </div>
+
+                <div id="runLogsBox" class="space-y-3">
+                    <p class="text-sm text-slate-500">No runs yet.</p>
+                </div>
+            </section>
         </div>
 
-        <!-- RIGHT -->
         <div class="xl:col-span-4 space-y-6">
-            <!-- CONFIG RULES -->
             <section class="bg-white rounded-3xl shadow-sm p-6">
                 <div class="flex justify-between items-center mb-6">
                     <div>
@@ -236,7 +260,6 @@
                 </div>
             </section>
 
-            <!-- QUICK LINKS -->
             <section class="bg-white rounded-3xl shadow-sm p-6">
                 <h2 class="text-xl font-bold mb-4">Quick Links</h2>
 
@@ -263,7 +286,6 @@
     </div>
 </main>
 
-<!-- CONFIG RULES MODAL -->
 <div id="rulesModal"
      class="fixed inset-0 bg-black/45 hidden items-center justify-center z-[999] p-4"
      onclick="handleBackdropClose(event)">
@@ -437,8 +459,27 @@
     </div>
 </div>
 
-<script th:inline="javascript">
-    const initialRecords = /*[[${myRecords}]]*/ [];
+<script>
+    function showNotice(message, type = 'info') {
+        const box = document.getElementById('uiNotice');
+        box.textContent = message;
+        box.classList.remove('hidden');
+
+        box.className = 'mb-6 rounded-2xl px-4 py-3 text-sm font-medium border';
+
+        if (type === 'success') {
+            box.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+        } else if (type === 'error') {
+            box.classList.add('bg-red-50', 'text-red-700', 'border-red-200');
+        } else {
+            box.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
+        }
+
+        clearTimeout(window.__noticeTimer);
+        window.__noticeTimer = setTimeout(() => {
+            box.classList.add('hidden');
+        }, 3500);
+    }
 
     function updateQueuedCredits() {
         const creditCells = document.querySelectorAll('.course-credit');
@@ -448,6 +489,15 @@
             if (!Number.isNaN(value)) total += value;
         });
         document.getElementById('queuedCreditsText').textContent = total;
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
     }
 
     async function removeCourseFromQueue(courseId) {
@@ -466,13 +516,14 @@
             const data = await response.json();
 
             if (data && data.success) {
-                window.location.reload();
+                showNotice(data.message || 'Removed successfully', 'success');
+                setTimeout(() => window.location.reload(), 450);
             } else {
-                alert(data?.message || 'Remove failed');
+                showNotice(data?.message || 'Remove failed', 'error');
             }
         } catch (e) {
             console.error(e);
-            alert('Remove failed');
+            showNotice('Remove failed', 'error');
         }
     }
 
@@ -483,9 +534,19 @@
             });
             const data = await response.json();
             console.log('START AUTO:', data);
+
+            if (data.success) {
+                showNotice(data.message || 'Engine started', 'success');
+            } else {
+                showNotice(data.message || 'Engine is already running', 'info');
+            }
+
             await refreshAutoEngineStatus();
+            await refreshRunLogs();
+            await refreshQueueTable();
         } catch (error) {
             console.error('START AUTO ERROR:', error);
+            showNotice('Start auto failed', 'error');
         }
     }
 
@@ -496,9 +557,14 @@
             });
             const data = await response.json();
             console.log('STOP AUTO:', data);
+
+            showNotice(data.message || 'Engine stopped', 'info');
             await refreshAutoEngineStatus();
+            await refreshRunLogs();
+            await refreshQueueTable();
         } catch (error) {
             console.error('STOP AUTO ERROR:', error);
+            showNotice('Stop auto failed', 'error');
         }
     }
 
@@ -509,10 +575,90 @@
             });
             const data = await response.json();
             console.log('RESET MOCK:', data);
-            alert(data.message || 'Mock state reset');
+
+            if (data.success) {
+                showNotice(data.message || 'Reset completed', 'success');
+                setTimeout(() => window.location.reload(), 700);
+            } else {
+                showNotice(data.message || 'Reset failed', 'error');
+            }
         } catch (error) {
             console.error('RESET MOCK ERROR:', error);
-            alert('Reset failed');
+            showNotice('Reset failed', 'error');
+        }
+    }
+
+    async function refreshQueueTable() {
+        try {
+            const response = await fetch('/queue/records');
+            const records = await response.json();
+
+            const tbody = document.getElementById('queueTableBody');
+            const emptyState = document.getElementById('queueEmptyState');
+            const tableWrapper = document.getElementById('queueTableWrapper');
+
+            if (!tbody) return;
+
+            if (!records || records.length === 0) {
+                tbody.innerHTML = '';
+                if (emptyState) emptyState.classList.remove('hidden');
+                if (tableWrapper) tableWrapper.classList.add('hidden');
+                document.getElementById('queuedCreditsText').textContent = '0';
+                return;
+            }
+
+            if (emptyState) emptyState.classList.add('hidden');
+            if (tableWrapper) tableWrapper.classList.remove('hidden');
+
+            let totalCredits = 0;
+
+            tbody.innerHTML = records.map(record => {
+                const course = record.course || {};
+                const credits = Number(course.credits || 0);
+                totalCredits += credits;
+
+                let statusClass = 'bg-amber-100 text-amber-700';
+                const statusText = record.status || 'PENDING';
+
+                if (statusText === 'REGISTERED' || statusText === 'SUCCESS') {
+                    statusClass = 'bg-emerald-100 text-emerald-700';
+                } else if (statusText === 'FAILED') {
+                    statusClass = 'bg-red-100 text-red-700';
+                }
+
+                return `
+                    <tr class="border-b last:border-0 hover:bg-slate-50 transition" data-course-id="${course.id || ''}">
+                        <td class="py-4 pr-4 font-semibold">${record.priority ?? ''}</td>
+                        <td class="py-4 pr-4 font-semibold">${escapeHtml(course.courseCode ?? '')}</td>
+                        <td class="py-4 pr-4">${escapeHtml((course.courseNameEn && course.courseNameEn.length > 0) ? course.courseNameEn : (course.groupName ?? ''))}</td>
+                        <td class="py-4 pr-4 course-credit">${credits}</td>
+                        <td class="py-4 pr-4 text-xs text-slate-500">${course.scheduleTime ?? ''}</td>
+                        <td class="py-4 pr-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold ${statusClass}">
+                                ${escapeHtml(statusText)}
+                            </span>
+                        </td>
+                        <td class="py-4 text-right">
+                            <button type="button"
+                                    class="remove-btn px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition"
+                                    data-course-id="${course.id || ''}">
+                                Remove
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('queuedCreditsText').textContent = totalCredits;
+
+            document.querySelectorAll('.remove-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    removeCourseFromQueue(btn.dataset.courseId);
+                });
+            });
+
+        } catch (error) {
+            console.error('QUEUE REFRESH ERROR:', error);
         }
     }
 
@@ -551,6 +697,44 @@
             }
         } catch (error) {
             console.error('STATUS ERROR:', error);
+        }
+    }
+
+    async function refreshRunLogs() {
+        try {
+            const res = await fetch('/auto-registration/logs');
+            const logs = await res.json();
+
+            const box = document.getElementById('runLogsBox');
+
+            if (!Array.isArray(logs) || logs.length === 0) {
+                box.innerHTML = `<p class="text-sm text-slate-500">No runs yet.</p>`;
+                return;
+            }
+
+            box.innerHTML = logs.map(log => `
+                <div class="rounded-2xl border border-slate-200 p-4 bg-slate-50">
+                    <div class="flex items-center justify-between">
+                        <p class="font-semibold text-slate-800">Run #${log.runNumber}</p>
+                        <span class="text-xs font-semibold px-3 py-1 rounded-full ${
+                            log.status === 'COMPLETED'
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : log.status === 'ERROR'
+                                    ? 'bg-red-100 text-red-700'
+                                    : log.status === 'STOPPED'
+                                        ? 'bg-amber-100 text-amber-700'
+                                        : 'bg-blue-100 text-blue-700'
+                        }">
+                            ${log.status}
+                        </span>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2"><strong>Started:</strong> ${log.startedAt || '-'}</p>
+                    <p class="text-sm text-slate-600"><strong>Finished:</strong> ${log.finishedAt || '-'}</p>
+                    <p class="text-sm text-slate-600"><strong>Message:</strong> ${log.message || '-'}</p>
+                </div>
+            `).join('');
+        } catch (e) {
+            console.error('RUN LOG ERROR:', e);
         }
     }
 
@@ -647,6 +831,7 @@
 
         await updateRulesSummary();
         closeRulesModal();
+        showNotice('Rules saved successfully', 'success');
     }
 
     async function updateRulesSummary() {
@@ -676,6 +861,8 @@
         updateQueuedCredits();
         updateRulesSummary();
         refreshAutoEngineStatus();
+        refreshRunLogs();
+        refreshQueueTable();
 
         document.querySelectorAll('.remove-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -685,6 +872,8 @@
     });
 
     setInterval(refreshAutoEngineStatus, 1000);
+    setInterval(refreshRunLogs, 1500);
+    setInterval(refreshQueueTable, 1200);
 </script>
 
 </body>

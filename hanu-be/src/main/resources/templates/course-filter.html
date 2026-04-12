@@ -148,10 +148,26 @@
         HANU Automatic Registration
     </div>
     <nav class="hidden md:flex items-center gap-8">
-        <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/dashboard">Dashboard</a>
-        <a class="text-[#1A237E] font-bold border-b-2 border-[#1A237E] pb-1" href="/courses/search">Course Search</a>
-        <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/timetable">Timetable</a>
-        <a class="text-slate-600 font-medium hover:text-[#1A237E]" href="/history">History</a>
+        <a class="text-slate-600 font-medium hover:text-[#1A237E]"
+           href="/dashboard">
+            Dashboard
+        </a>
+        <a class="text-slate-600 font-medium hover:text-[#1A237E]"
+           href="/courses/search">
+            Course Search
+        </a>
+        <a class="text-slate-600 font-medium hover:text-[#1A237E]"
+           href="/timetable">
+            Timetable
+        </a>
+        <a class="text-slate-600 font-medium hover:text-[#1A237E]"
+           href="/history">
+            History
+        </a>
+        <a class="text-slate-600 font-medium hover:text-[#1A237E]"
+           href="/mock-qldt">
+            Mock QLĐT
+        </a>
     </nav>
     <div class="flex items-center gap-4">
         <button class="p-2 text-slate-600 hover:bg-[#f3f3f3] rounded-full transition-all">
@@ -171,10 +187,14 @@
 <main class="max-w-[1600px] mx-auto px-8 py-10">
     <h1 class="text-4xl font-extrabold text-primary mb-2">Academic Course Search</h1>
     <p class="text-on-surface-variant mb-2">Browse and filter available courses for the current semester.</p>
-    <p class="text-sm text-gray-500 mb-8">
+    <p class="text-sm text-gray-500 mb-6">
         Current major filter:
         <span class="font-semibold" th:text="${studentMajorCode} ?: 'Unknown'"></span>
     </p>
+
+    <div id="uiNotice"
+         class="hidden mb-6 rounded-2xl px-4 py-3 text-sm font-medium border">
+    </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
 
@@ -243,26 +263,61 @@
                     </tr>
                     </thead>
                     <tbody class="divide-y">
-                    <tr th:each="course : ${courses}" class="hover:bg-gray-50 transition-colors">
+                    <tr th:each="course : ${courses}"
+                        class="hover:bg-gray-50 transition-colors"
+                        th:with="remainingSlots=${course.capacity - course.enrolled}">
                         <td class="px-8 py-5 font-semibold" th:text="${course.courseCode}"></td>
                         <td class="px-8 py-5 font-medium" th:text="${course.credits}"></td>
                         <td class="px-8 py-5"
                             th:text="${course.courseNameEn != null && !course.courseNameEn.isEmpty() ? course.courseNameEn : course.groupName}"></td>
                         <td class="px-8 py-5 text-sm" th:utext="${course.scheduleTime}"></td>
+
                         <td class="px-8 py-5">
-                            <span th:text="${course.enrolled} + '/' + ${course.capacity}"></span>
-                            <span th:if="${course.hasSlots()}" class="ml-3 inline-block px-3 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full">Open</span>
-                            <span th:unless="${course.hasSlots()}" class="ml-3 inline-block px-3 py-0.5 text-xs font-medium bg-red-100 text-red-700 rounded-full">Full</span>
+                            <span th:if="${remainingSlots > 0}"
+                                  class="font-medium text-emerald-700"
+                                  th:text="${remainingSlots} + '/' + ${course.capacity}">
+                                12/32
+                            </span>
+                            <span th:if="${remainingSlots <= 0}"
+                                  class="font-semibold text-red-600"
+                                  th:text="${remainingSlots} + '/' + ${course.capacity}">
+                                0/32
+                            </span>
+
+                            <span th:if="${remainingSlots > 0}"
+                                  class="ml-3 inline-block px-3 py-0.5 text-xs font-medium bg-emerald-100 text-emerald-700 rounded-full">
+                                Open
+                            </span>
+                            <span th:if="${remainingSlots <= 0}"
+                                  class="ml-3 inline-block px-3 py-0.5 text-xs font-medium bg-red-100 text-red-700 rounded-full">
+                                Full
+                            </span>
                         </td>
+
                         <td class="px-8 py-5 text-center">
+                            <!-- Nếu đã ở queue thì luôn cho Remove -->
                             <button type="button"
-                                    th:attr="data-course-id=${course.id}"
-                                    class="queue-btn px-6 py-2.5 text-sm font-medium rounded-2xl transition"
-                                    th:text="${queuedCourseIds != null and queuedCourseIds.contains(course.id)} ? 'Remove' : 'Add'"
-                                    th:classappend="${queuedCourseIds != null and queuedCourseIds.contains(course.id)}
-                                        ? ' bg-red-600 text-white hover:bg-red-700'
-                                        : ' bg-emerald-600 text-white hover:bg-emerald-700'">
+                                    th:if="${queuedCourseIds != null and queuedCourseIds.contains(course.id)}"
+                                    th:attr="data-course-id=${course.id},data-mode='remove',data-remaining-slots=${remainingSlots}"
+                                    class="queue-btn px-6 py-2.5 text-sm font-medium rounded-2xl transition bg-red-600 text-white hover:bg-red-700">
+                                Remove
+                            </button>
+
+                            <!-- Nếu chưa ở queue và còn slot thì cho Add -->
+                            <button type="button"
+                                    th:if="${(queuedCourseIds == null or !queuedCourseIds.contains(course.id)) and remainingSlots > 0}"
+                                    th:attr="data-course-id=${course.id},data-mode='add',data-remaining-slots=${remainingSlots}"
+                                    class="queue-btn px-6 py-2.5 text-sm font-medium rounded-2xl transition bg-emerald-600 text-white hover:bg-emerald-700">
                                 Add
+                            </button>
+
+                            <!-- Nếu chưa ở queue và hết slot thì disable -->
+                            <button type="button"
+                                    th:if="${(queuedCourseIds == null or !queuedCourseIds.contains(course.id)) and remainingSlots <= 0}"
+                                    th:attr="data-course-id=${course.id},data-mode='full',data-remaining-slots=${remainingSlots}"
+                                    class="queue-btn px-6 py-2.5 text-sm font-medium rounded-2xl transition bg-slate-300 text-slate-600 cursor-not-allowed"
+                                    disabled>
+                                Full
                             </button>
                         </td>
                     </tr>
@@ -296,6 +351,27 @@
 
 <script th:inline="javascript">
     const initialRecords = /*[[${myRecords}]]*/ [];
+
+    function showNotice(message, type = 'info') {
+        const box = document.getElementById('uiNotice');
+        box.textContent = message;
+        box.classList.remove('hidden');
+
+        box.className = 'mb-6 rounded-2xl px-4 py-3 text-sm font-medium border';
+
+        if (type === 'success') {
+            box.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+        } else if (type === 'error') {
+            box.classList.add('bg-red-50', 'text-red-700', 'border-red-200');
+        } else {
+            box.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
+        }
+
+        clearTimeout(window.__noticeTimer);
+        window.__noticeTimer = setTimeout(() => {
+            box.classList.add('hidden');
+        }, 3200);
+    }
 
     function setFilter(name, value) {
         const form = document.getElementById('filterForm');
@@ -606,24 +682,42 @@
     }
 
     async function toggleQueue(courseId, button) {
-        const isRemove = button.dataset.mode === 'remove';
+        const mode = button.dataset.mode;
+
+        if (mode === 'full') {
+            showNotice('Lớp này đã đầy, không thể thêm vào hàng đợi.', 'error');
+            return;
+        }
+
+        const isRemove = mode === 'remove';
         const url = isRemove ? '/queue/remove-ajax' : '/queue/add-ajax';
 
         const formData = new URLSearchParams();
         formData.append('courseId', courseId);
 
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-            },
-            body: formData.toString()
-        });
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                },
+                body: formData.toString()
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        updateButtonsFromQueue(data.myRecords || []);
-        renderVisualSchedule(data.myRecords || []);
+            if (data.success) {
+                showNotice(data.message || (isRemove ? 'Removed successfully' : 'Added successfully'), 'success');
+            } else {
+                showNotice(data.message || 'Action failed', 'error');
+            }
+
+            updateButtonsFromQueue(data.myRecords || []);
+            renderVisualSchedule(data.myRecords || []);
+        } catch (e) {
+            console.error(e);
+            showNotice('Action failed', 'error');
+        }
     }
 
     function updateButtonsFromQueue(records) {
@@ -635,20 +729,30 @@
 
         document.querySelectorAll('.queue-btn').forEach(btn => {
             const courseId = Number(btn.dataset.courseId);
+            const remainingSlots = Number(btn.dataset.remainingSlots || '0');
             const inQueue = queuedIds.has(courseId);
-
-            btn.dataset.mode = inQueue ? 'remove' : 'add';
-            btn.textContent = inQueue ? 'Remove' : 'Add';
 
             btn.classList.remove(
                 'bg-emerald-600', 'hover:bg-emerald-700',
-                'bg-red-600', 'hover:bg-red-700'
+                'bg-red-600', 'hover:bg-red-700',
+                'bg-slate-300', 'text-slate-600', 'cursor-not-allowed', 'text-white'
             );
 
+            btn.disabled = false;
+
             if (inQueue) {
-                btn.classList.add('bg-red-600', 'hover:bg-red-700');
+                btn.dataset.mode = 'remove';
+                btn.textContent = 'Remove';
+                btn.classList.add('bg-red-600', 'text-white', 'hover:bg-red-700');
+            } else if (remainingSlots > 0) {
+                btn.dataset.mode = 'add';
+                btn.textContent = 'Add';
+                btn.classList.add('bg-emerald-600', 'text-white', 'hover:bg-emerald-700');
             } else {
-                btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                btn.dataset.mode = 'full';
+                btn.textContent = 'Full';
+                btn.disabled = true;
+                btn.classList.add('bg-slate-300', 'text-slate-600', 'cursor-not-allowed');
             }
         });
     }

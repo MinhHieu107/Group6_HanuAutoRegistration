@@ -45,7 +45,9 @@ public class QueueController {
         if (selectedCourse == null) {
             return new QueueActionResponse(false, "Không tìm thấy môn học.", false, myRecords);
         }
-
+        if (!selectedCourse.hasSlots()) {
+            return new QueueActionResponse(false, "Lớp này đã đầy, không thể thêm vào hàng đợi.", false, myRecords);
+        }
         boolean alreadyExists = myRecords.stream()
                 .anyMatch(r -> r.getCourse() != null
                         && r.getCourse().getId() != null
@@ -114,7 +116,14 @@ public class QueueController {
 
         return new QueueActionResponse(true, "Đã xóa môn khỏi hàng đợi.", false, myRecords);
     }
-
+    @GetMapping("/records")
+    @ResponseBody
+    public List<RegistrationRecord> getQueueRecords(HttpSession session) {
+        @SuppressWarnings("unchecked")
+        List<RegistrationRecord> myRecords =
+                (List<RegistrationRecord>) session.getAttribute("myRecords");
+        return myRecords != null ? myRecords : new ArrayList<>();
+    }
     private List<Course> getSessionCourses(HttpSession session) {
         @SuppressWarnings("unchecked")
         List<Course> courses = (List<Course>) session.getAttribute("currentSearchCourses");
