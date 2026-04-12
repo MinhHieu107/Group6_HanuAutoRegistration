@@ -1,9 +1,11 @@
 package com.hanu.registration.controller;
 
 import com.hanu.registration.model.Course;
+import com.hanu.registration.model.GlobalQueueEntry;
 import com.hanu.registration.model.QueueActionResponse;
 import com.hanu.registration.model.RegistrationRecord;
 import com.hanu.registration.model.RegistrationStatus;
+import com.hanu.registration.service.FileBasedGlobalQueueStore;
 import com.hanu.registration.service.GlobalQueueStore;
 import com.hanu.registration.service.QueueRecordStateService;
 import jakarta.servlet.http.HttpSession;
@@ -13,7 +15,9 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/queue")
@@ -45,9 +49,11 @@ public class QueueController {
         if (selectedCourse == null) {
             return new QueueActionResponse(false, "Không tìm thấy môn học.", false, myRecords);
         }
+
         if (!selectedCourse.hasSlots()) {
             return new QueueActionResponse(false, "Lớp này đã đầy, không thể thêm vào hàng đợi.", false, myRecords);
         }
+
         boolean alreadyExists = myRecords.stream()
                 .anyMatch(r -> r.getCourse() != null
                         && r.getCourse().getId() != null
@@ -108,6 +114,7 @@ public class QueueController {
 
         if (removed) {
             globalQueueStore.markRemoved(studentId, courseId);
+            syncGlobalQueuePriorities(studentId, myRecords);
         }
 
         if (!removed) {
@@ -116,14 +123,104 @@ public class QueueController {
 
         return new QueueActionResponse(true, "Đã xóa môn khỏi hàng đợi.", false, myRecords);
     }
+
+    @PostMapping("/reorder")
+    @ResponseBody
+    public Map<String, Object> reorderQueue(@RequestBody List<Map<String, Object>> newOrder,
+                                            HttpSession session) {
+
+        @SuppressWarnings("unchecked")
+        List<RegistrationRecord> myRecords =
+                (List<RegistrationRecord>) session.getAttribute("myRecords");
+
+        String studentId = (String) session.getAttribute("studentId");
+
+        if (myRecords == null) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Queue is empty.");
+            return response;
+        }
+
+        Map<Long, Integer> priorityMap = new HashMap<>();
+
+        for (Map<String, Object> item : newOrder) {
+            Object courseIdObj = item.get("courseId");
+            Object priorityObj = item.get("priority");
+
+            if (courseIdObj == null || priorityObj == null) {
+                continue;
+            }
+
+            Long courseId = ((Number) courseIdObj).longValue();
+            Integer priority = ((Number) priorityObj).intValue();
+
+            priorityMap.put(courseId, priority);
+        }
+
+        for (RegistrationRecord record : myRecords) {
+            if (record.getCourse() != null && record.getCourse().getId() != null) {
+                Integer newPriority = priorityMap.get(record.getCourse().getId());
+                if (newPriority != null) {
+                    record.setPriority(newPriority);
+                    record.setUpdatedAt(LocalDateTime.now());
+                }
+            }
+        }
+
+        myRecords = sortRecords(myRecords);
+        session.setAttribute("myRecords", myRecords);
+        queueRecordStateService.registerStudentRecords(studentId, myRecords);
+
+        syncGlobalQueuePriorities(studentId, myRecords);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Queue reordered successfully.");
+        return response;
+    }
+
     @GetMapping("/records")
     @ResponseBody
     public List<RegistrationRecord> getQueueRecords(HttpSession session) {
         @SuppressWarnings("unchecked")
         List<RegistrationRecord> myRecords =
                 (List<RegistrationRecord>) session.getAttribute("myRecords");
+
         return myRecords != null ? myRecords : new ArrayList<>();
     }
+
+    private void syncGlobalQueuePriorities(String studentId, List<RegistrationRecord> myRecords) {
+        List<GlobalQueueEntry> allEntries = globalQueueStore.getAllEntries();
+
+        Map<Long, Integer> priorityMap = new HashMap<>();
+        for (RegistrationRecord record : myRecords) {
+            if (record.getCourse() != null && record.getCourse().getId() != null) {
+                priorityMap.put(record.getCourse().getId(), record.getPriority());
+            }
+        }
+
+        boolean changed = false;
+
+        for (GlobalQueueEntry entry : allEntries) {
+            if (entry != null
+                    && entry.isActive()
+                    && studentId.equals(entry.getStudentId())
+                    && entry.getCourseId() != null) {
+
+                Integer newPriority = priorityMap.get(entry.getCourseId());
+                if (newPriority != null) {
+                    entry.setLocalPriority(newPriority);
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed && globalQueueStore instanceof FileBasedGlobalQueueStore fileStore) {
+            fileStore.overwriteAllEntries(allEntries);
+        }
+    }
+
     private List<Course> getSessionCourses(HttpSession session) {
         @SuppressWarnings("unchecked")
         List<Course> courses = (List<Course>) session.getAttribute("currentSearchCourses");

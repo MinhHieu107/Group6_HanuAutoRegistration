@@ -6,7 +6,7 @@ import com.hanu.registration.model.RuleConfig;
 import com.hanu.registration.model.UserRuntimeContext;
 import org.springframework.stereotype.Service;
 
-@Service
+@Service("mockRegistrationGateway")
 public class MockRegistrationGateway implements RegistrationGateway {
 
     @Override
